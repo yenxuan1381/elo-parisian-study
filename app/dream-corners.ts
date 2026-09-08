@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { destinations, type Drink } from './room-settings';
+import { addTypewriter, type Typewriter, type TypewriterSound } from './typewriter';
 
 type P = T.Object3D;
 type Context = {
@@ -20,7 +21,7 @@ type Context = {
  random:()=>number; reduced:boolean;
 };
 
-export function addDreamCorners(c:Context){
+export function addDreamCorners(c:Context,sound?:TypewriterSound){
  const {scene,materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,chair,plant,bookStack,lamp,wood,darkWood,lightWood,rose,blush,linen,cream,ivory,brass,ink,paper,sage,ceramic,random,reduced}=c;
  const root=group(scene); const atlasTiles:T.Texture[]=[];const atlas=new T.TextureLoader().load('/travel-atlas.png',()=>atlasTiles.forEach(t=>{t.needsUpdate=true}));atlas.colorSpace=T.SRGBColorSpace;textures.push(atlas);
  const cancelled=new AbortController();let gone=false;
@@ -72,15 +73,10 @@ export function addDreamCorners(c:Context){
  box(drinks,.75,.025,.25,.47,1.833,-.12,brass,.018);
  drinkNames.forEach((id,i)=>{const gift=cup(drinks,.22+i*.24,1.859,-.1,[ivory,sage,blush][i]);gift.scale.setScalar(.74);interactive(gift,'gift',id)});
  label(drinks,'leave a little kindness',.44,1.737,.017,.77,.078);
- // Typewriter table and carriage, with real round keys and an editable paper surface.
+ // Typewriter table: the machine itself is a working one, built in ./typewriter.
  const writing=group(root,-3.58,0,2.52,Math.PI/2);interactive(writing,'typewriter');
  box(writing,1.32,.075,.63,0,.91,0,wood,.018);for(const x of [-.53,.53])for(const z of [-.23,.23])rod(writing,[x,.05,z],[x,.88,z],.033,darkWood);
- const typewriter=group(writing,0,.96,.02);box(typewriter,.62,.095,.46,0,.055,0,ink,.035);const keybed=box(typewriter,.59,.05,.28,0,.113,.07,sage,.022);keybed.rotation.x=.18;
- for(let row=0;row<3;row++)for(let col=0;col<9;col++){const key=cylinder(typewriter,.019,.021,.025,-.23+col*.056+(row%2)*.013,.132+row*.012,.153-row*.061,ivory,12);key.rotation.x=.15;}
- box(typewriter,.25,.018,.029,0,.147,.215,brass,.006);box(typewriter,.63,.15,.1,0,.192,-.163,sage,.025);
- const roller=cylinder(typewriter,.037,.037,.65,0,.29,-.15,ink);roller.rotation.z=Math.PI/2;for(const x of [-.36,.36]){const knob=cylinder(typewriter,.045,.045,.026,x,.29,-.15,brass);knob.rotation.z=Math.PI/2}
- const noteCanvas=document.createElement('canvas');noteCanvas.width=768;noteCanvas.height=1024;const noteCtx=noteCanvas.getContext('2d')!;const noteTex=new T.CanvasTexture(noteCanvas);noteTex.colorSpace=T.SRGBColorSpace;textures.push(noteTex);const noteMat=new T.MeshStandardMaterial({map:noteTex,roughness:1});materials.push(noteMat);const sheet=plane(typewriter,.39,.43,0,.471,-.154,noteMat);sheet.rotation.x=-.07;
- function updateNote(text:string){noteCtx.fillStyle='#f0e5cd';noteCtx.fillRect(0,0,768,1024);noteCtx.fillStyle='#625042';noteCtx.font='27px monospace';noteCtx.fillText('Dear Élo,',65,100);let line='',y=170;for(const word of text.slice(0,700).split(/\s+/)){if(noteCtx.measureText(line+word).width>630){noteCtx.fillText(line,65,y);line='';y+=43}line+=word+' ';if(y>940)break}noteCtx.fillText(line,65,y);noteTex.needsUpdate=true}updateNote('');
+ const typewriter:Typewriter=addTypewriter(c,writing,0,.9475,.03,sound);
  bookStack(writing,-.47,.96,-.05,2);lamp(writing,.45,.96,-.12,.64);label(writing,'a note for Élo',0,.79,.328,.51,.083);
  // Gramophone and selectable CD sleeves.
  const music=group(root,1.71,0,4.97,Math.PI);interactive(music,'music');box(music,1.57,.78,.58,0,.51,0,wood,.03);box(music,1.65,.06,.65,0,.93,0,darkWood);
@@ -120,12 +116,13 @@ export function addDreamCorners(c:Context){
  const steamGeo=new T.BufferGeometry();const steamPos=new Float32Array(18*3);steamGeo.setAttribute('position',new T.BufferAttribute(steamPos,3));geometries.push(steamGeo);const steamMat=new T.PointsMaterial({color:'#f9edd9',transparent:true,opacity:.43,size:.018,depthWrite:false});materials.push(steamMat);const steam=new T.Points(steamGeo,steamMat);steam.visible=false;drinks.add(steam);
  let lit=false,playing=false,drink:Drink|null=null,drinkProgress=0;const fills:Record<Drink,number>={tea:0,matcha:0,coffee:0};
  return {
-  updateNote,
+  typewriter,
+  updateNote:typewriter.setText,
   fillBowl(){kibble.visible=true;},
   setCandles(value:boolean){lit=value;candleFlames.forEach(f=>f.visible=value)},
   setPlaying(value:boolean){playing=value;},
   setDrink(id:Drink,progress:number){drink=id;drinkProgress=Math.min(3,Math.max(0,progress));fills[id]=drinkProgress;liquids[id].visible=progress>0;steam.visible=progress===3;},
-  update(time:number,dt:number,night:number){nookGlow.intensity=1.6+night*2;bulbMat.emissiveIntensity=1.1+night*.8;candleGlows.forEach((light,i)=>{light.intensity=lit?(.45+(reduced?0:Math.sin(time*.006+i)*.05)):0});candleFlames.forEach((f,i)=>{f.scale.y=.024*1.9*(1+(reduced?0:Math.sin(time*.008+i)*.09))});if(playing&&!reduced)record.rotation.y+=dt*.65;for(const id of ['tea','matcha','coffee'] as Drink[]){const target=.024+fills[id]/3*.085;liquids[id].position.y=T.MathUtils.lerp(liquids[id].position.y,target,1-Math.exp(-dt*4))}if(drink&&drinkProgress===3){const index=drinkNames.indexOf(drink);for(let i=0;i<18;i++){const phase=(i/18+(reduced?0:time*.00013))%1;steamPos[i*3]=-.66+index*.64+Math.sin(phase*8+i)*.025;steamPos[i*3+1]=1.29+phase*.32;steamPos[i*3+2]=.21+Math.cos(phase*5+i)*.022}steamGeo.attributes.position.needsUpdate=true}},
+  update(time:number,dt:number,night:number){typewriter.update(dt);nookGlow.intensity=1.6+night*2;bulbMat.emissiveIntensity=1.1+night*.8;candleGlows.forEach((light,i)=>{light.intensity=lit?(.45+(reduced?0:Math.sin(time*.006+i)*.05)):0});candleFlames.forEach((f,i)=>{f.scale.y=.024*1.9*(1+(reduced?0:Math.sin(time*.008+i)*.09))});if(playing&&!reduced)record.rotation.y+=dt*.65;for(const id of ['tea','matcha','coffee'] as Drink[]){const target=.024+fills[id]/3*.085;liquids[id].position.y=T.MathUtils.lerp(liquids[id].position.y,target,1-Math.exp(-dt*4))}if(drink&&drinkProgress===3){const index=drinkNames.indexOf(drink);for(let i=0;i<18;i++){const phase=(i/18+(reduced?0:time*.00013))%1;steamPos[i*3]=-.66+index*.64+Math.sin(phase*8+i)*.025;steamPos[i*3+1]=1.29+phase*.32;steamPos[i*3+2]=.21+Math.cos(phase*5+i)*.022}steamGeo.attributes.position.needsUpdate=true}},
   dispose(){gone=true;cancelled.abort()},
  };
 }

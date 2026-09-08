@@ -5,6 +5,63 @@ export const tracks = [
 ] as const;
 export type TrackId = typeof tracks[number]['id'];
 
+// Synthesized typewriter voice: a key clack, the margin bell, the carriage coming back,
+// and a fresh sheet feeding through. Built on the first keystroke, so never autoplaying.
+export class TypewriterAudio {
+  muted = false;
+  private context: AudioContext | null = null;
+  private out: GainNode | null = null;
+  private noise: AudioBuffer | null = null;
+  private ready() {
+    if (this.muted) return null;
+    try {
+      this.context ??= new AudioContext();
+      if (this.context.state === 'suspended') void this.context.resume();
+      if (!this.out) { this.out = this.context.createGain(); this.out.gain.value = .5; this.out.connect(this.context.destination); }
+      if (!this.noise) {
+        const buffer = this.context.createBuffer(1, Math.floor(this.context.sampleRate * .6), this.context.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        this.noise = buffer;
+      }
+      return this.context;
+    } catch { this.muted = true; return null; }
+  }
+  private hiss(at: number, gain: number, length: number, frequency: number, q = 1.4, sweep = 0) {
+    const context = this.context!, source = context.createBufferSource(), filter = context.createBiquadFilter(), level = context.createGain();
+    source.buffer = this.noise; source.loop = true;
+    filter.type = 'bandpass'; filter.Q.value = q; filter.frequency.setValueAtTime(frequency, at);
+    if (sweep) filter.frequency.linearRampToValueAtTime(sweep, at + length);
+    level.gain.setValueAtTime(0, at);
+    level.gain.linearRampToValueAtTime(gain, at + .004);
+    level.gain.exponentialRampToValueAtTime(.0001, at + length);
+    source.connect(filter); filter.connect(level); level.connect(this.out!);
+    source.start(at); source.stop(at + length + .02);
+    source.onended = () => { source.disconnect(); filter.disconnect(); level.disconnect(); };
+  }
+  private tone(at: number, frequency: number, gain: number, length: number, type: OscillatorType = 'sine') {
+    const context = this.context!, osc = context.createOscillator(), level = context.createGain();
+    osc.type = type; osc.frequency.value = frequency;
+    level.gain.setValueAtTime(0, at);
+    level.gain.linearRampToValueAtTime(gain, at + .003);
+    level.gain.exponentialRampToValueAtTime(.0001, at + length);
+    osc.connect(level); level.connect(this.out!);
+    osc.start(at); osc.stop(at + length + .02);
+    osc.onended = () => { osc.disconnect(); level.disconnect(); };
+  }
+  strike() { const context = this.ready(); if (!context) return; const at = context.currentTime; this.hiss(at, .34, .045, 2100, 1.1); this.tone(at, 148, .2, .07); }
+  space() { const context = this.ready(); if (!context) return; const at = context.currentTime; this.hiss(at, .18, .05, 900, 1); this.tone(at, 104, .13, .08); }
+  bell() { const context = this.ready(); if (!context) return; const at = context.currentTime; this.tone(at, 1672, .12, 1.1); this.tone(at, 2508, .06, .8); }
+  carriage() {
+    const context = this.ready(); if (!context) return; const at = context.currentTime;
+    this.hiss(at, .2, .3, 900, 2, 2600);
+    for (let i = 0; i < 7; i++) this.hiss(at + i * .034, .1, .022, 1500 + i * 90, 2.4);
+    this.tone(at + .3, 122, .16, .1);
+  }
+  sheet() { const context = this.ready(); if (!context) return; this.hiss(context.currentTime, .16, .38, 520, .8, 320); }
+  dispose() { this.out?.disconnect(); this.out = null; this.noise = null; if (this.context) void this.context.close(); this.context = null; }
+}
+
 // Original synthesized room ambience; no remote recordings or autoplay.
 export class RoomAudio {
   private context: AudioContext | null = null;

@@ -1,6 +1,6 @@
 // Add the owner's destinations here when supplied. Empty values never launch a payment or email.
 export const roomSettings = {
-  ownerEmail: '',
+  ownerEmail: 'emilylo1381@gmail.com',
   gifts: { tea: '', matcha: '', coffee: '' },
   musicLinks: [] as { title: string; url: string; kind: 'song' | 'album' | 'playlist' }[],
 };
@@ -25,7 +25,7 @@ export function safeExternalUrl(value: string): string | null {
 }
 export function letterMailto(email: string, name: string, note: string): string | null {
   if (!/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(email) || !note.trim()) return null;
-  return `mailto:${email}?subject=${encodeURIComponent('A letter from your room')}&body=${encodeURIComponent(`${note.trim()}\n\nWith love,\n${name.trim() || 'A visitor'}`)}`;
+  return `mailto:${email}?subject=${encodeURIComponent('My Parisian Dream — A letter from the room')}&body=${encodeURIComponent(`${note.trim()}\n\nWith love,\n${name.trim() || 'A visitor'}\n\nSent from My Parisian Dream.`)}`;
 }
 export function spotifyEmbed(value: string): string | null {
   const url = safeExternalUrl(value); if (!url) return null;

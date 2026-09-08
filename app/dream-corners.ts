@@ -23,7 +23,7 @@ type Context = {
 
 export function addDreamCorners(c:Context,sound?:TypewriterSound){
  const {scene,materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,chair,plant,bookStack,lamp,wood,darkWood,lightWood,rose,blush,linen,cream,ivory,brass,ink,paper,sage,ceramic,random,reduced}=c;
- const root=group(scene); const atlasTiles:T.Texture[]=[];const atlas=new T.TextureLoader().load('/travel-atlas.png',()=>atlasTiles.forEach(t=>{t.needsUpdate=true}));atlas.colorSpace=T.SRGBColorSpace;textures.push(atlas);
+ const root=group(scene);
  const cancelled=new AbortController();let gone=false;
  function plane(p:P,w:number,h:number,x:number,y:number,z:number,m:T.Material){const geo=new T.PlaneGeometry(w,h);geometries.push(geo);const o=new T.Mesh(geo,m);o.position.set(x,y,z);p.add(o);return o}
  function label(p:P,text:string,x:number,y:number,z:number,w=.5,h=.12,color='#644239',background='#ebd9bd'){
@@ -58,6 +58,9 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
   const geo=new T.LatheGeometry(points,24);geometries.push(geo);const vessel=new T.Mesh(geo,m);vessel.castShadow=true;g.add(vessel);
   const hg=new T.TorusGeometry(.038,.01,8,20);geometries.push(hg);const handle=new T.Mesh(hg,m);handle.position.set(.086,.078,0);g.add(handle);
   cylinder(g,.115,.115,.013,0,-.004,0,ivory);
+  const rimGeo=new T.TorusGeometry(.069,.003,6,32);geometries.push(rimGeo);const rim=new T.Mesh(rimGeo,brass);rim.rotation.x=Math.PI/2;rim.position.y=.131;g.add(rim);
+  const saucerGeo=new T.TorusGeometry(.104,.0025,6,32);geometries.push(saucerGeo);const saucer=new T.Mesh(saucerGeo,brass);saucer.rotation.x=Math.PI/2;saucer.position.y=.004;g.add(saucer);
+  rod(g,[-.1,.012,.02],[-.12,.014,.16],.004,brass);sphere(g,.016,-.12,.014,.16,brass,.7,.16,1.4);
   if(id){const liquid=cylinder(g,.057,.057,.005,0,.018,0,beverageMats[id]);liquid.visible=false;liquids[id]=liquid}
   return g;
  }
@@ -76,8 +79,9 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  // Typewriter table: the machine itself is a working one, built in ./typewriter.
  const writing=group(root,-3.58,0,2.52,Math.PI/2);interactive(writing,'typewriter');
  box(writing,1.32,.075,.63,0,.91,0,wood,.018);for(const x of [-.53,.53])for(const z of [-.23,.23])rod(writing,[x,.05,z],[x,.88,z],.033,darkWood);
- const typewriter:Typewriter=addTypewriter(c,writing,0,.9475,.03,sound);
- bookStack(writing,-.47,.96,-.05,2);lamp(writing,.45,.96,-.12,.64);label(writing,'a note for Élo',0,.79,.328,.51,.083);
+ const typewriter:Typewriter=addTypewriter(c,root,-.43,1.11,-.18,sound);
+ for(let i=0;i<3;i++){const envelope=group(writing,-.08,.966+i*.009,.04);envelope.rotation.y=i*.075;box(envelope,.38,.006,.23,0,0,0,paper);rod(envelope,[-.19,.005,-.11],[0,.005,.04],.0018,brass);rod(envelope,[0,.005,.04],[.19,.005,-.11],.0018,brass);cylinder(envelope,.023,.023,.006,0,.009,.04,rose,24);}
+ bookStack(writing,-.47,.96,-.05,2);lamp(writing,.45,.96,-.12,.64);label(writing,'letters from Paris',0,.79,.328,.67,.083);
  // Gramophone and selectable CD sleeves.
  const music=group(root,1.71,0,4.97,Math.PI);interactive(music,'music');box(music,1.57,.78,.58,0,.51,0,wood,.03);box(music,1.65,.06,.65,0,.93,0,darkWood);
  for(const x of [-.7,.7])for(const z of [-.22,.22])cylinder(music,.033,.041,.16,x,.1,z,darkWood);
@@ -93,7 +97,7 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  type Land={features:{geometry:{type:string;coordinates:number[][][]|number[][][][]}}[]};
  void fetch('/world-land.json',{signal:cancelled.signal}).then(r=>{if(!r.ok)throw new Error('Map unavailable');return r.json() as Promise<Land>}).then(land=>{if(gone)return;mapCtx.strokeStyle='#b6a283';mapCtx.lineWidth=.8;for(let lon=0;lon<1200;lon+=100){mapCtx.beginPath();mapCtx.moveTo(lon,0);mapCtx.lineTo(lon,600);mapCtx.stroke()}for(let lat=0;lat<600;lat+=100){mapCtx.beginPath();mapCtx.moveTo(0,lat);mapCtx.lineTo(1200,lat);mapCtx.stroke()}mapCtx.fillStyle='#879375';mapCtx.strokeStyle='#697258';for(const feature of land.features){const polygons=feature.geometry.type==='Polygon'?[feature.geometry.coordinates as number[][][]]:feature.geometry.coordinates as number[][][][];for(const polygon of polygons){mapCtx.beginPath();for(const ring of polygon){ring.forEach(([lon,lat],i)=>{const x=(lon+180)/360*1200,y=(90-lat)/180*600;if(i===0)mapCtx.moveTo(x,y);else mapCtx.lineTo(x,y)});mapCtx.closePath()}mapCtx.fill('evenodd');mapCtx.stroke()}}mapTex.needsUpdate=true}).catch(()=>{if(!gone){mapCtx.fillStyle='#645445';mapCtx.font='28px Georgia';mapCtx.fillText('The world, one little memory at a time',120,300);mapTex.needsUpdate=true}});
  const stringMat=plain('#7c3944');
- destinations.forEach((place,i)=>{const x=-1.28+i*.51,y=-.68;const polaroid=group(board,x,y,.092,(i%2?.04:-.05));polaroid.rotation.z=(i%2?.04:-.055);interactive(polaroid,'travel',place.id);box(polaroid,.43,.52,.012,0,0,0,paper);const tex=atlas.clone();tex.repeat.set(1/3,1/2);tex.offset.set((i%3)/3,i<3?.5:0);textures.push(tex);atlasTiles.push(tex);const mat=new T.MeshStandardMaterial({map:tex,roughness:1});materials.push(mat);plane(polaroid,.377,.353,0,.043,.008,mat);label(polaroid,place.name,0,-.194,.009,.36,.055);
+ destinations.forEach((place,i)=>{const x=-1.28+i*.51,y=-.68;const polaroid=group(board,x,y,.092,(i%2?.04:-.05));polaroid.rotation.z=(i%2?.04:-.055);interactive(polaroid,'travel',place.id);box(polaroid,.43,.52,.012,0,0,0,paper);const mapCard=plane(polaroid,.377,.353,0,.043,.008,mapMat);mapCard.name=place.name+' map';sphere(polaroid,.012,place.lon/360*.377,.043+place.lat/180*.353,.02,rose);label(polaroid,place.name,0,-.194,.009,.36,.055);
   const pinX=place.lon/360*2.35,pinY=.27+place.lat/180*1.175;
   sphere(board,.022,pinX,pinY,.085,brass);sphere(board,.021,x,y+.244,.14,rose);
   const curve=new T.QuadraticBezierCurve3(new T.Vector3(pinX,pinY,.08),new T.Vector3((pinX+x)/2,y+.45,.105),new T.Vector3(x,y+.244,.135));const geo=new T.TubeGeometry(curve,18,.003,4,false);geometries.push(geo);board.add(new T.Mesh(geo,stringMat));
@@ -114,7 +118,10 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  const kibble=group(bowl,0,.082,0);kibble.visible=false;const kibbleGeo=new T.SphereGeometry(.017,6,4);geometries.push(kibbleGeo);const food=new T.InstancedMesh(kibbleGeo,plain('#866046'),65);for(let i=0;i<65;i++){const a=random()*Math.PI*2,r=Math.sqrt(random())*.162;const m=new T.Matrix4().makeTranslation(Math.cos(a)*r,random()*.026,Math.sin(a)*r);food.setMatrixAt(i,m)}kibble.add(food);
  // A soft curl of steam follows the selected drink.
  const steamGeo=new T.BufferGeometry();const steamPos=new Float32Array(18*3);steamGeo.setAttribute('position',new T.BufferAttribute(steamPos,3));geometries.push(steamGeo);const steamMat=new T.PointsMaterial({color:'#f9edd9',transparent:true,opacity:.43,size:.018,depthWrite:false});materials.push(steamMat);const steam=new T.Points(steamGeo,steamMat);steam.visible=false;drinks.add(steam);
- let lit=false,playing=false,drink:Drink|null=null,drinkProgress=0;const fills:Record<Drink,number>={tea:0,matcha:0,coffee:0};
+ const teaTray=group(drinks,.19,1.148,.12);box(teaTray,.34,.025,.23,0,0,0,brass,.025);
+ const biscuit=plain('#c49b65',.85),icing=plain('#d2a6a7',.7);
+ for(let i=0;i<3;i++){const x=-.1+i*.1;for(const y of [.027,.051])cylinder(teaTray,.041,.041,.016,x,y,0,i===1?icing:biscuit,24);cylinder(teaTray,.039,.039,.01,x,.039,0,ivory,24);}
+ let lit=true,playing=false,drink:Drink|null=null,drinkProgress=0;const fills:Record<Drink,number>={tea:0,matcha:0,coffee:0};candleFlames.forEach(f=>f.visible=true);
  return {
   typewriter,
   updateNote:typewriter.setText,

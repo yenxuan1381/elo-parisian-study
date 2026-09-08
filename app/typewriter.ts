@@ -31,7 +31,7 @@ const CHAR_W=CHAR_PX/PX,LINE_STEP=LINE_PX/PX;
 const PRINT_Y=.285,PRINT_Z=-.085,LEAN=.35;
 // The sheet sits so the line being typed lands on the print point: everything above it on
 // the page has already rolled through, so the paper grows upward as the letter gets longer.
-const SHEET_REST=(TOP_PX+LINE_PX/2)/PX-SHEET_H/2;
+const SHEET_REST=.19;
 const CARRIAGE_X0=(W/2-MARGIN-CHAR_PX/2)/PX;
 const BAR_L=.15,BAR_REST=1.15,BAR_COUNT=42,BELL_AT=COLS-8;
 const PAPER='#f1e6cf',KEY_ROWS=['zxcvbnm,.?','asdfghjkl;','qwertyuiop','1234567890'];
@@ -41,8 +41,8 @@ const silent:TypewriterSound={strike(){},space(){},bell(){},carriage(){},sheet()
 
 export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:number,audio:TypewriterSound=silent):Typewriter{
  const {materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,brass,ink,rose,random,reduced}=c;
- const root=group(parent,x,y,z);root.scale.setScalar(.55);
- const shell=surface('#e8dcc0'),petal=plain('#e6c1bf',.62),steel=plain('#93897c',.5,.55),felt=plain('#7d4a4c',.95);
+ const root=group(parent,x,y,z);root.scale.setScalar(.9);root.userData.activity='typewriter';
+ const shell=plain('#e6d6c0',.3,.12),petal=plain('#ead7ce',.32),steel=plain('#a5aaa5',.27,.72),felt=plain('#542d37',.95);
 
  // Frame: a low cream body with curved side plates and a brass name plate.
  box(root,.66,.06,.5,0,.03,0,shell,.022);
@@ -54,6 +54,16 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  box(root,.16,.014,.006,0,.062,.253,brass,.003);
  box(root,.62,.17,.075,0,.105,-.212,shell,.02);
  box(root,.58,.02,.055,0,.198,-.208,shell,.008);
+ for(const side of [-1,1]){
+  box(root,.009,.034,.38,side*.332,.058,-.005,brass,.004);
+  for(let j=0;j<7;j++)box(root,.004,.043,.006,side*.332,.135,-.16+j*.025,steel,.002);
+  for(const kz of [-.2,.2]){cylinder(root,.007,.007,.004,side*.3,.064,kz,steel,12);box(root,.009,.001,.001,side*.3,.067,kz,ink);}
+ }
+ const badge=document.createElement('canvas');badge.width=512;badge.height=96;
+ const badgeCtx=badge.getContext('2d')!;badgeCtx.fillStyle='#b18a40';badgeCtx.fillRect(0,0,512,96);badgeCtx.fillStyle='#352b24';badgeCtx.font='bold 46px Georgia';badgeCtx.textAlign='center';badgeCtx.fillText('ELO  /  PARIS',256,65);
+ const badgeTex=new T.CanvasTexture(badge);badgeTex.colorSpace=T.SRGBColorSpace;textures.push(badgeTex);
+ const badgeMat=new T.MeshStandardMaterial({map:badgeTex,metalness:.4,roughness:.4});materials.push(badgeMat);
+ const badgeGeo=new T.PlaneGeometry(.155,.028);geometries.push(badgeGeo);const badgeFace=new T.Mesh(badgeGeo,badgeMat);badgeFace.position.set(0,.069,.257);root.add(badgeFace);
  for(const sx of [-.26,.26])for(const sz of [-.19,.2])cylinder(root,.026,.03,.022,sx,.011,sz,ink);
 
  // Ribbon spools, and the ribbon that runs from each of them up to the type guide.
@@ -61,6 +71,7 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
   const spool=group(root,side*.246,.212,.055);
   cylinder(spool,.052,.052,.008,0,.026,0,brass,20);cylinder(spool,.05,.05,.026,0,.013,0,felt,20);
   cylinder(spool,.014,.014,.04,0,.02,0,brass);
+  for(let j=0;j<5;j++){const a=j*Math.PI*2/5;cylinder(spool,.008,.008,.002,Math.cos(a)*.032,.031,Math.sin(a)*.032,ink,12);}
   rod(root,[side*.246,.238,.055],[side*.03,.262,-.058],.0045,felt);
  }
  // Type guide and the ribbon carrier that lifts each time a bar comes up.
@@ -93,15 +104,18 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  KEY_ROWS.forEach((row,r)=>Array.from(row).forEach((ch,i)=>{
   const cell=r*10+i;
   const cap=group(root,-.27+i*.06+(r%2?-.007:.007),.085+r*.02,.185-r*.042);
-  cylinder(cap,.0215,.0195,.009,0,0,0,petal,20);
+  cap.userData.typeKey=ch;
+  cylinder(cap,.0235,.022,.008,0,-.003,0,brass,28);
+  cylinder(cap,.0205,.0195,.009,0,0,0,petal,28);
   const face=new T.Mesh(capGeo,(()=>{const tex=glyphTex.clone();tex.repeat.set(1/8,1/5);tex.offset.set((cell%8)/8,1-Math.floor(cell/8)/5-1/5);textures.push(tex);const m=new T.MeshStandardMaterial({map:tex,transparent:true,roughness:.7});materials.push(m);return m})());
   face.rotation.x=-Math.PI/2;face.position.y=.0048;cap.add(face);
   rod(cap,[0,-.006,0],[0,-.032,-.006],.0024,brass);
   keys.set(ch,{cap,bar:(cell*7)%BAR_COUNT});
  }));
- const deck=box(root,.62,.014,.212,0,.104,.122,shell,.006);deck.rotation.x=.444;
+ const deck=box(root,.62,.014,.212,0,.088,.122,shell,.006);deck.rotation.x=.444;
  const shifts=[-1,1].map(side=>{const cap=group(root,side*.302,.085,.19);box(cap,.05,.009,.026,0,0,0,petal,.004);rod(cap,[0,-.006,0],[0,-.03,-.008],.0024,brass);return cap});
  const spaceBar=group(root,0,.073,.228);box(spaceBar,.3,.011,.026,0,0,0,petal,.005);
+ spaceBar.userData.typeKey=' ';
  for(const sx of [-.11,.11])rod(spaceBar,[sx,-.006,0],[sx,-.028,-.012],.0026,brass);
  const spaceRest=spaceBar.position.y;
 
@@ -113,10 +127,13 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  for(let i=0;i<7;i++)box(platenRoll,.6,.002,.002,0,.0475,-.004+i*.0013,felt).castShadow=false;
  for(const side of [-1,1]){
   cylinder(carriage,.056,.056,.026,side*.318,.243,-.128,brass,20).rotation.z=Math.PI/2;
+  const knob=cylinder(carriage,.046,.046,.039,side*.346,.243,-.128,ink,32);knob.rotation.z=Math.PI/2;
+  for(let j=0;j<24;j++){const a=j*Math.PI/12;rod(carriage,[side*.328,.243+Math.cos(a)*.046,-.128+Math.sin(a)*.046],[side*.366,.243+Math.cos(a)*.046,-.128+Math.sin(a)*.046],.0017,steel);}
   box(carriage,.03,.1,.12,side*.335,.215,-.13,shell,.01);
  }
  box(carriage,.66,.016,.04,0,.198,-.128,shell,.008);
  const lever=group(carriage,-.352,.243,-.128);
+ lever.userData.typeKey='\n';
  rod(lever,[0,0,0],[-.05,.055,.06],.006,brass);rod(lever,[-.05,.055,.06],[-.045,.05,.15],.005,brass);
  sphere(lever,.014,-.045,.05,.16,ink);
  const bail=group(carriage,0,.316,-.072);
@@ -137,7 +154,7 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  // shorter as the letter grows. Same sheet, just the half that has not rolled through yet.
  const blank=plain(PAPER,1);blank.side=T.DoubleSide;
  const rest=group(carriage,0,PRINT_Y-.03,-.19);rest.rotation.x=-.62;
- const tail=new T.Mesh(sheetGeo,blank);tail.castShadow=false;rest.add(tail);
+ const tail=new T.Mesh(sheetGeo,blank);tail.castShadow=false;tail.visible=false;rest.add(tail);
  const showTail=(row:number)=>{const left=Math.max(.02,SHEET_H-fedTo(row)/PX);tail.scale.y=left/SHEET_H;tail.position.y=left/2};
 
  // Bell, struck a few characters before the right margin.
@@ -152,17 +169,14 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  const cellY=(row:number)=>TOP_PX+row*LINE_PX+LINE_PX/2;
  const fedTo=(row:number)=>cellY(row)+LINE_PX*.6;
  function feed(row:number){
-  const from=row?fedTo(row-1):0;
-  pctx.fillStyle=PAPER;pctx.fillRect(0,from,W,fedTo(row)-from);
-  pctx.fillStyle='rgba(120,92,66,.16)';pctx.fillRect(0,fedTo(row)-2.5,W,2.5);
-  if(row)pctx.fillRect(0,from-2.5,W,2.5);
+  if(row===0){pctx.fillStyle=PAPER;pctx.fillRect(0,0,W,H);pctx.fillStyle='#b6a187';pctx.font='16px Georgia';pctx.textAlign='center';pctx.fillText('MY PARISIAN DREAM',W/2,37);}
   pageTex.needsUpdate=true;showTail(row);
  }
  function ink1(row:number,column:number,ch:string){
   if(ch===' ')return;
   pctx.save();pctx.translate(cellX(column)+(random()-.5)*.9,cellY(row)+(random()-.5)*1.3);
   pctx.rotate((random()-.5)*.05);
-  pctx.fillStyle=`rgba(66,54,46,${.66+random()*.28})`;
+  pctx.fillStyle=`rgba(45,38,35,${.86+random()*.14})`;
   pctx.textAlign='center';pctx.textBaseline='middle';pctx.font='24px "Courier New",monospace';
   pctx.fillText(ch,0,0);pctx.restore();pageTex.needsUpdate=true;
  }
@@ -195,9 +209,9 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
   written[line]=carry;col=carry.length;carriageGoal=CARRIAGE_X0-col*CHAR_W;rung=col>=BELL_AT;redraw();
  }
  function carriageReturn(){
-  if(line+1>=ROWS){loadSheet();return}
+  if(line+1>=ROWS){written.shift();line--;redraw()}
   line++;col=0;rung=false;written[line]='';
-  carriageGoal=CARRIAGE_X0;riseGoal=line*LINE_STEP;rollGoal=roll+LINE_STEP/.047;
+  carriageGoal=CARRIAGE_X0;riseGoal=Math.min(line,3)*LINE_STEP;rollGoal=roll+LINE_STEP/.047;
   leverSwing=1;feed(line);audio.carriage();
  }
  function loadSheet(){if(eject)return;eject=1;audio.sheet()}
@@ -208,21 +222,22 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
   written[line]+=ch;ink1(line,col,ch);swing(ch);audio.strike();step();
  }
  function erase(){
-  if(eject||!written[line].length)return;
+  if(eject)return;
+  if(!written[line].length){if(line){written.pop();line--;col=written[line].length;carriageGoal=CARRIAGE_X0-col*CHAR_W;riseGoal=line*LINE_STEP;redraw()}return;}
   written[line]=written[line].slice(0,-1);col=Math.max(0,col-1);
   carriageGoal=CARRIAGE_X0-col*CHAR_W;rung=col>=BELL_AT;
   pctx.fillStyle=PAPER;pctx.fillRect(cellX(col)-CHAR_PX/2-1,cellY(line)-LINE_PX/2,CHAR_PX+2,LINE_PX);
   pageTex.needsUpdate=true;audio.space();
  }
  function setText(text:string){
-  written.length=0;written.push('');line=0;col=0;rung=false;
-  for(const word of text.replace(/\s+/g,' ').trim().split(' ')){
-   if(!word)continue;
-   if(written[line].length+word.length+(written[line]?1:0)>COLS){if(line+1>=ROWS)break;line++;written.push('')}
-   written[line]+=(written[line]?' ':'')+word;
+  const lines:string[]=[];
+  for(const paragraph of text.replace(/\r/g,'').split('\n')){
+   let remaining=paragraph;
+   while(remaining.length>COLS){let at=remaining.lastIndexOf(' ',COLS);if(at<1)at=COLS;lines.push(remaining.slice(0,at));remaining=remaining.slice(at+(remaining[at]===' '?1:0));}
+   lines.push(remaining);
   }
-  col=Math.min(COLS-1,written[line].length);
-  carriageGoal=CARRIAGE_X0-col*CHAR_W;rise=riseGoal=line*LINE_STEP;redraw();
+  written.length=0;written.push(...lines.slice(-ROWS));line=written.length-1;col=written[line].length;rung=col>=BELL_AT;eject=0;pageMat.opacity=1;
+  carriageGoal=CARRIAGE_X0-col*CHAR_W;rise=riseGoal=Math.min(line,3)*LINE_STEP;redraw();
  }
 
  return {

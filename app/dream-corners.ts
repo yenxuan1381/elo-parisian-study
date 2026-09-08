@@ -48,7 +48,6 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  for(const x of [-.79,0,.79]){box(drinks,.72,.63,.028,x,.63,.326,lightWood);box(drinks,.61,.52,.022,x,.63,.35,wood);sphere(drinks,.025,x+.24,.72,.387,brass)}
  for(const x of [-.93,.93])for(const z of [-.22,.22])cylinder(drinks,.035,.05,.22,x,.12,z,darkWood);
  for(const y of [1.8,2.36]){box(drinks,2.32,.055,.29,0,y,-.14,wood);for(const x of [-.91,.91])rod(drinks,[x,y,-.28],[x,y-.18,-.13],.009,brass)}
- label(drinks,'a little daily ritual',0,2.69,-.24,1.48,.19);
  const teaMat=plain('#926026'),matchaMat=plain('#86995b'),coffeeMat=plain('#4f3125');
  const liquids:Record<Drink,T.Mesh>={} as Record<Drink,T.Mesh>;
  const beverageMats={tea:teaMat,matcha:matchaMat,coffee:coffeeMat};
@@ -75,21 +74,19 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  // A second row of empty gift cups on their own tray.
  box(drinks,.75,.025,.25,.47,1.833,-.12,brass,.018);
  drinkNames.forEach((id,i)=>{const gift=cup(drinks,.22+i*.24,1.859,-.1,[ivory,sage,blush][i]);gift.scale.setScalar(.74);interactive(gift,'gift',id)});
- label(drinks,'leave a little kindness',.44,1.737,.017,.77,.078);
  // Typewriter table: the machine itself is a working one, built in ./typewriter.
  const writing=group(root,-3.58,0,2.52,Math.PI/2);interactive(writing,'typewriter');
- box(writing,1.32,.075,.63,0,.91,0,wood,.018);for(const x of [-.53,.53])for(const z of [-.23,.23])rod(writing,[x,.05,z],[x,.88,z],.033,darkWood);
- const typewriter:Typewriter=addTypewriter(c,root,-.43,1.11,-.18,sound);
- for(let i=0;i<3;i++){const envelope=group(writing,-.08,.966+i*.009,.04);envelope.rotation.y=i*.075;box(envelope,.38,.006,.23,0,0,0,paper);rod(envelope,[-.19,.005,-.11],[0,.005,.04],.0018,brass);rod(envelope,[0,.005,.04],[.19,.005,-.11],.0018,brass);cylinder(envelope,.023,.023,.006,0,.009,.04,rose,24);}
- bookStack(writing,-.47,.96,-.05,2);lamp(writing,.45,.96,-.12,.64);label(writing,'letters from Paris',0,.79,.328,.67,.083);
+ box(writing,1.68,.075,.72,0,.91,0,wood,.018);for(const x of [-.68,.68])for(const z of [-.26,.26])rod(writing,[x,.05,z],[x,.88,z],.033,darkWood);
+ const typewriter:Typewriter=addTypewriter(c,writing,0,.9475,.03,sound);
+ bookStack(writing,-.62,.96,.22,2);lamp(writing,.62,.96,.2,.64);
  // Gramophone and selectable CD sleeves.
  const music=group(root,1.71,0,4.97,Math.PI);interactive(music,'music');box(music,1.57,.78,.58,0,.51,0,wood,.03);box(music,1.65,.06,.65,0,.93,0,darkWood);
  for(const x of [-.7,.7])for(const z of [-.22,.22])cylinder(music,.033,.041,.16,x,.1,z,darkWood);
  box(music,1.35,.4,.03,0,.57,.31,lightWood);for(let i=0;i<13;i++)box(music,.04,.33,.045,-.6+i*.1,.57,.339,darkWood);
  const gram=group(music,-.32,.97,.02);box(gram,.62,.1,.48,0,.055,0,wood,.025);const record=cylinder(gram,.205,.205,.016,0,.123,0,ink,48);cylinder(gram,.048,.048,.003,0,.133,0,rose);rod(gram,[.22,.17,-.13],[.09,.155,.08],.012,brass);
  const hornPoints=[new T.Vector2(.025,0),new T.Vector2(.035,.12),new T.Vector2(.07,.23),new T.Vector2(.14,.34),new T.Vector2(.25,.44)];const hornGeo=new T.LatheGeometry(hornPoints,32);geometries.push(hornGeo);const hornMat=plain('#b28a45',.46,.4);hornMat.side=T.DoubleSide;const horn=new T.Mesh(hornGeo,hornMat);horn.position.set(-.15,.31,-.12);horn.rotation.z=-.65;horn.rotation.x=.56;gram.add(horn);rod(gram,[-.15,.12,-.12],[-.15,.34,-.12],.025,brass);
- for(let i=0;i<5;i++){const cd=group(music,.22+i*.087,.98,.06,-.15);box(cd,.027,.33,.32,0,.166,0,[sage,rose,ivory,blush,ceramic][i]);interactive(cd,'music',String(i));}
- label(music,'the listening shelf',0,.824,.329,.86,.075);lamp(music,.57,.98,-.12,.61);
+ for(let i=0;i<5;i++){const cd=group(music,.05+i*.082,.98,.06,-.15);box(cd,.027,.33,.32,0,.166,0,[sage,rose,ivory,blush,ceramic][i]);interactive(cd,'music',String(i));}
+ lamp(music,.62,.98,-.12,.61);
  // Travel pinboard with a geographically placed world map and tied polaroids.
  const board=group(root,-.8,2.89,5.46,Math.PI);interactive(board,'travel');box(board,3.24,1.98,.08,0,0,0,surface('#aa805d'));
  for(const x of [-1.65,1.65])box(board,.065,2.1,.11,x,0,.01,wood);for(const y of [-1.04,1.04])box(board,3.36,.065,.11,0,y,.01,wood);
@@ -102,7 +99,6 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
   sphere(board,.022,pinX,pinY,.085,brass);sphere(board,.021,x,y+.244,.14,rose);
   const curve=new T.QuadraticBezierCurve3(new T.Vector3(pinX,pinY,.08),new T.Vector3((pinX+x)/2,y+.45,.105),new T.Vector3(x,y+.244,.135));const geo=new T.TubeGeometry(curve,18,.003,4,false);geometries.push(geo);board.add(new T.Mesh(geo,stringMat));
  });
- label(board,'places that stay with you',0,1.22,.03,1.72,.17);
  // Warm festoon lights along the back cornice and board.
  const bulbMat=plain('#ffe1a1');bulbMat.emissive=new T.Color('#ffbf64');bulbMat.emissiveIntensity=1.1;
  for(let i=0;i<24;i++){const x=-3.8+i*.32,y=4.05-Math.sin(i/23*Math.PI)*.38;if(i)rod(root,[x-.32,4.05-Math.sin((i-1)/23*Math.PI)*.38,5.2],[x,y,5.2],.009,darkWood);sphere(root,.029,x,y-.055,5.2,bulbMat,.8,1.2,.8)}
@@ -111,10 +107,9 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  const candleShelf=group(root,3.94,0,-.37,-Math.PI/2);interactive(candleShelf,'candles');box(candleShelf,1.5,.085,.4,0,1.5,0,wood);for(const x of [-.59,.59])rod(candleShelf,[x,1.5,-.15],[x,1.22,.12],.018,brass);
  const candleFlames:T.Mesh[]=[];const candleGlows:T.PointLight[]=[];const wax=plain('#efdbb7');const flameMat=new T.MeshBasicMaterial({color:'#ffe5a2'});materials.push(flameMat);
  for(let i=0;i<3;i++){const x=-.46+i*.46,h=[.25,.33,.28][i],m=[sage,rose,ceramic][i];const candle=group(candleShelf,x,1.55,0);cylinder(candle,.13,.125,h,0,h/2,0,m,32);for(let k=0;k<24;k++){const a=k*Math.PI/12;cylinder(candle,.008,.008,h,Math.cos(a)*.128,h/2,Math.sin(a)*.128,m,5)}cylinder(candle,.115,.115,.01,0,h+.005,0,wax);rod(candle,[0,h,0],[0,h+.037,0],.004,ink);label(candle,'LOEWE',0,h*.5,.135,.14,.047);const flame=sphere(candle,.024,0,h+.061,0,flameMat,.62,1.9,.62);flame.visible=false;candleFlames.push(flame);const glow=new T.PointLight('#ffb355',0,2.1,2);glow.position.set(x,1.55+h+.09,.06);candleShelf.add(glow);candleGlows.push(glow)}
- label(candleShelf,'a softer kind of evening',0,1.28,.05,1.11,.12);
  // Empty bowl, with kibble added only after the visitor fills it.
- const bowl=group(root,2.84,0,3.45);interactive(bowl,'cat');box(bowl,.78,.016,.51,0,.018,0,linen,.05);
- const bowlGeo=new T.LatheGeometry([new T.Vector2(0,0),new T.Vector2(.19,0),new T.Vector2(.24,.13),new T.Vector2(.21,.15),new T.Vector2(.16,.033),new T.Vector2(0,.033)],32);geometries.push(bowlGeo);const vessel=new T.Mesh(bowlGeo,ceramic);vessel.position.y=.035;bowl.add(vessel);label(bowl,'for a little friend',0,.089,.224,.27,.048);
+ const bowl=group(root,3.26,0,5.14,-.42);interactive(bowl,'cat');box(bowl,.78,.016,.51,0,.018,0,linen,.05);
+ const bowlGeo=new T.LatheGeometry([new T.Vector2(0,0),new T.Vector2(.19,0),new T.Vector2(.24,.13),new T.Vector2(.21,.15),new T.Vector2(.16,.033),new T.Vector2(0,.033)],32);geometries.push(bowlGeo);const vessel=new T.Mesh(bowlGeo,ceramic);vessel.position.y=.035;bowl.add(vessel);
  const kibble=group(bowl,0,.082,0);kibble.visible=false;const kibbleGeo=new T.SphereGeometry(.017,6,4);geometries.push(kibbleGeo);const food=new T.InstancedMesh(kibbleGeo,plain('#866046'),65);for(let i=0;i<65;i++){const a=random()*Math.PI*2,r=Math.sqrt(random())*.162;const m=new T.Matrix4().makeTranslation(Math.cos(a)*r,random()*.026,Math.sin(a)*r);food.setMatrixAt(i,m)}kibble.add(food);
  // A soft curl of steam follows the selected drink.
  const steamGeo=new T.BufferGeometry();const steamPos=new Float32Array(18*3);steamGeo.setAttribute('position',new T.BufferAttribute(steamPos,3));geometries.push(steamGeo);const steamMat=new T.PointsMaterial({color:'#f9edd9',transparent:true,opacity:.43,size:.018,depthWrite:false});materials.push(steamMat);const steam=new T.Points(steamGeo,steamMat);steam.visible=false;drinks.add(steam);

@@ -47,17 +47,17 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  // Frame: a low cream body with curved side plates and a brass name plate.
  box(root,.66,.06,.5,0,.03,0,shell,.022);
  for(const side of [-1,1]){
-  box(root,.048,.21,.42,side*.306,.135,-.03,shell,.028);
-  box(root,.035,.055,.2,side*.29,.245,-.06,shell,.016);
+  box(root,.048,.21,.42,side*.318,.135,-.03,shell,.028);
+  box(root,.035,.055,.2,side*.303,.245,-.06,shell,.016);
  }
  box(root,.6,.055,.032,0,.058,.235,shell,.014);
  box(root,.16,.014,.006,0,.062,.253,brass,.003);
- box(root,.62,.17,.075,0,.105,-.212,shell,.02);
- box(root,.58,.02,.055,0,.198,-.208,shell,.008);
+ box(root,.62,.17,.075,0,.105,-.231,shell,.02);
+ box(root,.58,.02,.055,0,.198,-.227,shell,.008);
  for(const side of [-1,1]){
-  box(root,.009,.034,.38,side*.332,.058,-.005,brass,.004);
-  for(let j=0;j<7;j++)box(root,.004,.043,.006,side*.332,.135,-.16+j*.025,steel,.002);
-  for(const kz of [-.2,.2]){cylinder(root,.007,.007,.004,side*.3,.064,kz,steel,12);box(root,.009,.001,.001,side*.3,.067,kz,ink);}
+  box(root,.009,.034,.38,side*.344,.058,-.005,brass,.004);
+  for(let j=0;j<7;j++)box(root,.004,.043,.006,side*.344,.135,-.16+j*.025,steel,.002);
+  for(const kz of [-.2,.2]){cylinder(root,.007,.007,.004,side*.312,.064,kz,steel,12);box(root,.009,.001,.001,side*.312,.067,kz,ink);}
  }
  const badge=document.createElement('canvas');badge.width=512;badge.height=96;
  const badgeCtx=badge.getContext('2d')!;badgeCtx.fillStyle='#b18a40';badgeCtx.fillRect(0,0,512,96);badgeCtx.fillStyle='#352b24';badgeCtx.font='bold 46px Georgia';badgeCtx.textAlign='center';badgeCtx.fillText('ELO  /  PARIS',256,65);
@@ -68,11 +68,12 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
 
  // Ribbon spools, and the ribbon that runs from each of them up to the type guide.
  for(const side of [-1,1]){
-  const spool=group(root,side*.246,.212,.055);
+  cylinder(root,.017,.023,.152,side*.23,.136,.055,shell,16);
+  const spool=group(root,side*.23,.216,.055);
   cylinder(spool,.052,.052,.008,0,.026,0,brass,20);cylinder(spool,.05,.05,.026,0,.013,0,felt,20);
   cylinder(spool,.014,.014,.04,0,.02,0,brass);
   for(let j=0;j<5;j++){const a=j*Math.PI*2/5;cylinder(spool,.008,.008,.002,Math.cos(a)*.032,.031,Math.sin(a)*.032,ink,12);}
-  rod(root,[side*.246,.238,.055],[side*.03,.262,-.058],.0045,felt);
+  rod(root,[side*.23,.242,.055],[side*.03,.262,-.058],.0045,felt);
  }
  // Type guide and the ribbon carrier that lifts each time a bar comes up.
  const vibrator=group(root,0,.252,-.062);
@@ -91,7 +92,6 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
   box(swing,.013,.014,.005,0,BAR_L,0,ink,.002);
   bars.push(swing);
  }
- for(const side of [-1,1])box(root,.022,.11,.13,side*.224,.19,-.02,shell,.008);
 
  // Keyboard: four staggered rows of pastel caps on brass stems, plus shifts and a space bar.
  const glyphs=document.createElement('canvas');glyphs.width=512;glyphs.height=320;
@@ -129,7 +129,7 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
   cylinder(carriage,.056,.056,.026,side*.318,.243,-.128,brass,20).rotation.z=Math.PI/2;
   const knob=cylinder(carriage,.046,.046,.039,side*.346,.243,-.128,ink,32);knob.rotation.z=Math.PI/2;
   for(let j=0;j<24;j++){const a=j*Math.PI/12;rod(carriage,[side*.328,.243+Math.cos(a)*.046,-.128+Math.sin(a)*.046],[side*.366,.243+Math.cos(a)*.046,-.128+Math.sin(a)*.046],.0017,steel);}
-  box(carriage,.03,.1,.12,side*.335,.215,-.13,shell,.01);
+  box(carriage,.03,.1,.115,side*.335,.222,-.117,shell,.01);
  }
  box(carriage,.66,.016,.04,0,.198,-.128,shell,.008);
  const lever=group(carriage,-.352,.243,-.128);
@@ -150,12 +150,27 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  const sheetGeo=new T.PlaneGeometry(SHEET_W,SHEET_H);geometries.push(sheetGeo);
  const paper=group(carriage,0,PRINT_Y,PRINT_Z);paper.rotation.x=-LEAN;
  const sheet=new T.Mesh(sheetGeo,pageMat);sheet.position.y=SHEET_REST;paper.add(sheet);
- // The length still to come stands up behind the platen against the paper rest, and gets
- // shorter as the letter grows. Same sheet, just the half that has not rolled through yet.
+ // The rest of the sheet is still wound on the platen: a paper-width ribbon that leaves
+ // the roller on the tangent the page stands on, so the page reads as rolled in rather
+ // than resting on top. It sits a hair inside the page plane so the two never z-fight.
  const blank=plain(PAPER,1);blank.side=T.DoubleSide;
- const rest=group(carriage,0,PRINT_Y-.03,-.19);rest.rotation.x=-.62;
- const tail=new T.Mesh(sheetGeo,blank);tail.castShadow=false;tail.visible=false;rest.add(tail);
- const showTail=(row:number)=>{const left=Math.max(.02,SHEET_H-fedTo(row)/PX);tail.scale.y=left/SHEET_H;tail.position.y=left/2};
+ const PLATEN_Y=.243,PLATEN_Z=-.128,ROLL_R=.0533,TANGENT=Math.atan2(Math.cos(LEAN),Math.sin(LEAN));
+ const spine:number[][]=[];
+ {
+  const ty=PLATEN_Y+ROLL_R*Math.cos(TANGENT),tz=PLATEN_Z+ROLL_R*Math.sin(TANGENT);
+  spine.push([ty+Math.cos(LEAN)*.085,tz-Math.sin(LEAN)*.085]);
+  for(let i=0;i<=28;i++){const a=TANGENT+(-2-TANGENT)*(i/28);spine.push([PLATEN_Y+ROLL_R*Math.cos(a),PLATEN_Z+ROLL_R*Math.sin(a)]);}
+ }
+ const rollGeo=new T.BufferGeometry();
+ {
+  const pos:number[]=[],index:number[]=[];
+  spine.forEach(([py,pz])=>{pos.push(-SHEET_W/2,py,pz,SHEET_W/2,py,pz)});
+  for(let i=0;i<spine.length-1;i++){const a=i*2;index.push(a,a+2,a+1,a+1,a+2,a+3)}
+  rollGeo.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+  rollGeo.setIndex(index);rollGeo.computeVertexNormals();
+ }
+ geometries.push(rollGeo);
+ const rolled=new T.Mesh(rollGeo,blank);rolled.castShadow=false;carriage.add(rolled);
 
  // Bell, struck a few characters before the right margin.
  const bell=group(root,.215,.155,-.03);sphere(bell,.03,0,0,0,brass,1,.72,1);cylinder(bell,.004,.004,.03,0,-.02,0,brass);
@@ -167,10 +182,9 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
 
  const cellX=(column:number)=>MARGIN+column*CHAR_PX+CHAR_PX/2;
  const cellY=(row:number)=>TOP_PX+row*LINE_PX+LINE_PX/2;
- const fedTo=(row:number)=>cellY(row)+LINE_PX*.6;
  function feed(row:number){
   if(row===0){pctx.fillStyle=PAPER;pctx.fillRect(0,0,W,H);pctx.fillStyle='#b6a187';pctx.font='16px Georgia';pctx.textAlign='center';pctx.fillText('MY PARISIAN DREAM',W/2,37);}
-  pageTex.needsUpdate=true;showTail(row);
+  pageTex.needsUpdate=true;
  }
  function ink1(row:number,column:number,ch:string){
   if(ch===' ')return;
@@ -247,7 +261,7 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
    const ease=1-Math.exp(-dt*(reduced?60:9));
    carriage.position.x+=(carriageGoal-carriage.position.x)*(reduced?1:1-Math.exp(-dt*16));
    rise+=(riseGoal-rise)*ease;roll+=(rollGoal-roll)*ease;
-   platenRoll.rotation.x=roll;sheet.position.y=SHEET_REST+rise;
+   platenRoll.rotation.x=roll;sheet.position.y=SHEET_REST+rise;rolled.visible=!eject;
    // The basket lifts a little while a shift key is held, as the segment shift does.
    for(const s of shifts)s.position.y+=((shifted?.079:.085)-s.position.y)*ease;
    spaceBar.position.y+=(spaceRest-spaceBar.position.y)*(1-Math.exp(-dt*14));

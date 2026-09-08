@@ -1,7 +1,10 @@
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { addDreamCorners } from './dream-corners';
+import { addNightSky } from './night-sky';
+import type { Drink } from './room-settings';
 
-export type RoomController = { go:(id:string)=>void; setEvening:(value:boolean)=>void; dispose:()=>void };
+export type RoomController = { go:(id:string)=>void; setEvening:(value:boolean)=>void; setCandles:(value:boolean)=>void; fillBowl:()=>void; setDrink:(id:Drink,progress:number)=>void; updateNote:(text:string)=>void; setPlaying:(value:boolean)=>void; launchFireworks:(color:string)=>boolean; dispose:()=>void };
 type Parent = T.Object3D;
 type View = {position:number[]; target:number[]};
 const views:Record<string,View> = {
@@ -9,9 +12,16 @@ const views:Record<string,View> = {
  desk:{position:[-.6,1.8,1.45],target:[-.65,1.35,-.85]},
  library:{position:[-1.65,1.9,.4],target:[-3.8,1.9,-1.8]},
  window:{position:[1.6,1.7,-1.15],target:[1.15,2.2,-4.8]},
+ nook:{position:[.85,2.05,2.65],target:[-.85,1.7,4.85]},
+ drinks:{position:[1.67,1.83,2.02],target:[3.55,1.55,2.08]},
+ typewriter:{position:[-1.9,1.65,2.65],target:[-3.53,1.25,2.52]},
+ music:{position:[1.78,1.75,3.25],target:[1.71,1.25,4.97]},
+ travel:{position:[-.8,2.7,3.35],target:[-.8,2.8,5.4]},
+ candles:{position:[2.21,1.91,-.1],target:[3.94,1.77,-.37]},
+ cat:{position:[2.82,1.5,2.57],target:[2.84,.13,3.45]},
 };
 
-export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:string)=>void):RoomController{
+export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:string)=>void,onInteract:(id:string,detail?:string)=>void=()=>{}):RoomController{
  const scene=new T.Scene();scene.background=new T.Color('#e4bfa6');scene.fog=new T.Fog('#e4bfa6',14,34);
  const camera=new T.PerspectiveCamera(58,host.clientWidth/host.clientHeight,.04,70);
  const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -67,7 +77,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  for(const x of [-.1,.1])rod(window,[x,1.65,.12],[x,1.88,.12],.02,brass);
  box(window,4.12,.12,.4,0,.55,.04,cream);
  const outsideMat=new T.MeshBasicMaterial({map:paris});materials.push(outsideMat);
- const skyline=mesh(geom('sky',()=>new T.PlaneGeometry(19,10)),outsideMat,scene,1.7,3.35,-9,false);
+ mesh(geom('sky',()=>new T.PlaneGeometry(19,10)),outsideMat,scene,1.7,3.35,-9,false);
  box(scene,5,.15,1.4,1.6,.35,-5,cream);
  for(let x=-.6;x<4;x+=.24)rod(scene,[x,.48,-4.92],[x,1.55,-4.92],.015,ink);
  rod(scene,[-.7,1.57,-4.92],[4,1.57,-4.92],.027,ink);
@@ -143,20 +153,22 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  const basket=group(desk,.58,0,-.05);cylinder(basket,.22,.17,.4,0,.2,0,lightWood);for(let i=0;i<9;i++){const ring=mesh(geom('basketRing',()=>new T.TorusGeometry(.205,.008,5,24)),darkWood,basket,0,.04+i*.04,0);ring.rotation.x=Math.PI/2;ring.scale.setScalar(.83+i*.017)}for(let i=0;i<3;i++){const roll=cylinder(basket,.032,.032,.49,i*.075-.065,.3,0,paper);roll.rotation.z=(i-1)*.16}
  // Warm sunlight, soft local lamps, and drifting dust in the window light.
  const ambient=new T.HemisphereLight('#fff1d6','#987a69',2.1);scene.add(ambient);
- const sun=new T.DirectionalLight('#ffe0a5',3.6);sun.position.set(4,7,-7);sun.target.position.set(-1,0,2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.035;sun.shadow.bias=-.0004;sun.shadow.radius=4;scene.add(sun,sun.target);
+ const sun=new T.DirectionalLight('#ffe0a5',3.6);sun.position.set(4,5.4,-8);sun.target.position.set(-2,0,2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.035;sun.shadow.bias=-.0004;sun.shadow.radius=4;scene.add(sun,sun.target);
  const fill=new T.DirectionalLight('#f1c0b3',.8);fill.position.set(2,3,4);scene.add(fill);
  const dustGeo=new T.BufferGeometry();const dustPositions=new Float32Array(100*3);for(let i=0;i<100;i++){dustPositions[i*3]=random()*6-2;dustPositions[i*3+1]=random()*4;dustPositions[i*3+2]=random()*7-4}dustGeo.setAttribute('position',new T.BufferAttribute(dustPositions,3));geometries.push(dustGeo);const dustMat=new T.PointsMaterial({color:'#fff0c9',size:.013,transparent:true,opacity:.45,depthWrite:false});materials.push(dustMat);const dust=new T.Points(dustGeo,dustMat);scene.add(dust);
+ const corners=addDreamCorners({scene,materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,chair,plant,bookStack,lamp,wood,darkWood,lightWood,rose,blush,linen,cream,ivory,brass,ink,paper,sage,ceramic,random,reduced});
+ const nightSky=addNightSky(scene,textures,materials,geometries,reduced);
  let yaw=0,pitch=0,goalYaw=0,goalPitch=0;const targetPosition=new T.Vector3();let traveling=false;let disposed=false;let evening=false;let lastTime=0;let ready=false;
  function setAngles(target:T.Vector3,pos:T.Vector3){const delta=target.clone().sub(pos);goalYaw=Math.atan2(delta.x,-delta.z);goalPitch=Math.atan2(delta.y,Math.hypot(delta.x,delta.z))}
  function go(id:string){const v=views[id]||views.room;targetPosition.fromArray(v.position);setAngles(new T.Vector3().fromArray(v.target),targetPosition);while(goalYaw-yaw>Math.PI)goalYaw-=Math.PI*2;while(goalYaw-yaw<-Math.PI)goalYaw+=Math.PI*2;traveling=true;if(reduced){camera.position.copy(targetPosition);yaw=goalYaw;pitch=goalPitch;traveling=false}onView(id)}
  camera.position.fromArray(views.room.position);go('room');yaw=goalYaw;pitch=goalPitch;traveling=false;
  // Keep free motion inside the room and out of furniture; guided paths rise above obstructions.
- const obstacles=[{x:-.55,z:-.45,w:2.85,d:1.5},{x:-.65,z:1.2,w:1,d:1},{x:2.9,z:-2.75,w:1.2,d:1.3},{x:1.25,z:1.02,w:1,d:.8},{x:-1.47,z:-3.56,w:1.85,d:.9},{x:1.85,z:-2.95,w:.8,d:.8}];
+ const obstacles=[{x:-.55,z:-.45,w:2.85,d:1.5},{x:-.65,z:1.2,w:1,d:1},{x:2.9,z:-2.75,w:1.2,d:1.3},{x:1.25,z:1.02,w:1,d:.8},{x:-1.47,z:-3.56,w:1.85,d:.9},{x:1.85,z:-2.95,w:.8,d:.8},{x:-.95,z:4.82,w:2.8,d:1.15},{x:-.9,z:3.38,w:1.16,d:.73},{x:3.6,z:2.08,w:.9,d:2.5},{x:1.71,z:4.97,w:1.8,d:.8},{x:-3.58,z:2.52,w:.8,d:1.5}];
  function walk(distance:number){traveling=false;const nx=camera.position.x+Math.sin(yaw)*distance,nz=camera.position.z-Math.cos(yaw)*distance;if(nx< -3.2||nx>3.75||nz< -3.85||nz>5)return;const hit=obstacles.some(o=>Math.abs(nx-o.x)<o.w/2+.1&&Math.abs(nz-o.z)<o.d/2+.1);if(!hit){camera.position.x=nx;camera.position.z=nz;targetPosition.copy(camera.position)}}
  const pointers=new Map<number,{x:number;y:number}>();let startX=0,startY=0,lastX=0,lastY=0,moved=false,pinch=0;const ray=new T.Raycaster();
  function down(e:PointerEvent){host.focus();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});renderer.domElement.setPointerCapture(e.pointerId);startX=lastX=e.clientX;startY=lastY=e.clientY;moved=false;traveling=false;if(pointers.size===2){const p=[...pointers.values()];pinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)}}
  function move(e:PointerEvent){if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(Math.hypot(e.clientX-startX,e.clientY-startY)>5)moved=true;if(pointers.size===2){const p=[...pointers.values()];const length=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);walk((length-pinch)*.009);pinch=length;moved=true;return}goalYaw-=(e.clientX-lastX)*.003;goalPitch=T.MathUtils.clamp(goalPitch+(e.clientY-lastY)*.0025,-.65,.7);lastX=e.clientX;lastY=e.clientY}
- function up(e:PointerEvent){pointers.delete(e.pointerId);if(!moved&&e.type!=='pointercancel'){const bounds=renderer.domElement.getBoundingClientRect();ray.setFromCamera(new T.Vector2((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1),camera);const hits=ray.intersectObjects(scene.children,true);if(hits.length){let o:T.Object3D|null=hits[0].object;while(o){if(o.userData.destination){go(o.userData.destination);break}o=o.parent}}}if(pointers.size===1){const p=[...pointers.values()][0];lastX=p.x;lastY=p.y}}
+ function up(e:PointerEvent){pointers.delete(e.pointerId);if(!moved&&e.type!=='pointercancel'){const bounds=renderer.domElement.getBoundingClientRect();ray.setFromCamera(new T.Vector2((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1),camera);const hits=ray.intersectObjects(scene.children,true).filter(hit=>{let p:T.Object3D|null=hit.object;while(p){if(!p.visible)return false;p=p.parent}return !(hit.object instanceof T.Points)});if(hits.length){let o:T.Object3D|null=hits[0].object;while(o){if(o.userData.activity){const action=o.userData.activity as string;go(action==='reading'?'nook':action==='gift'?'drinks':action);onInteract(action,o.userData.detail as string|undefined);break}if(o.userData.destination){go(o.userData.destination);break}o=o.parent}}}if(pointers.size===1){const p=[...pointers.values()][0];lastX=p.x;lastY=p.y}}
  function wheel(e:WheelEvent){e.preventDefault();walk(-T.MathUtils.clamp(e.deltaY,-70,70)*.003)}
  const pressed=new Set<string>();const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','w','s','W','S','Home'];
  function keydown(e:KeyboardEvent){if(!keys.includes(e.key))return;e.preventDefault();if(e.key==='Home')go('room');else{traveling=false;pressed.add(e.key.toLowerCase())}}
@@ -166,8 +178,9 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  const direction=new T.Vector3();
  function frame(time:number){if(disposed)return;const dt=Math.min((time-lastTime)/1000,.05);lastTime=time;const speed=1-Math.exp(-dt*5);if(pressed.has('arrowleft'))goalYaw-=dt*.7;if(pressed.has('arrowright'))goalYaw+=dt*.7;if(pressed.has('arrowup'))goalPitch=Math.min(.7,goalPitch+dt*.5);if(pressed.has('arrowdown'))goalPitch=Math.max(-.65,goalPitch-dt*.5);if(pressed.has('w'))walk(dt*.9);if(pressed.has('s'))walk(-dt*.9);
   if(traveling){camera.position.lerp(targetPosition,speed);if(camera.position.distanceTo(targetPosition)<.008)traveling=false}yaw+= (goalYaw-yaw)*speed;pitch+=(goalPitch-pitch)*speed;direction.set(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));camera.lookAt(camera.position.clone().add(direction));
-  sun.intensity=T.MathUtils.lerp(sun.intensity,evening?.15:3.6,speed);ambient.intensity=T.MathUtils.lerp(ambient.intensity,evening?.7:2.1,speed);fill.intensity=T.MathUtils.lerp(fill.intensity,evening?.25:.8,speed);renderer.toneMappingExposure=T.MathUtils.lerp(renderer.toneMappingExposure,evening?1.05:1.25,speed);outsideMat.color.lerp(new T.Color(evening?'#74748f':'#ffffff'),speed);lampLights.forEach(l=>l.intensity=T.MathUtils.lerp(l.intensity,evening?3:1.4,speed));
+  sun.intensity=T.MathUtils.lerp(sun.intensity,evening?.05:3.6,speed);ambient.intensity=T.MathUtils.lerp(ambient.intensity,evening?.42:2.1,speed);fill.intensity=T.MathUtils.lerp(fill.intensity,evening?.18:.8,speed);renderer.toneMappingExposure=T.MathUtils.lerp(renderer.toneMappingExposure,evening?1.05:1.25,speed);lampLights.forEach(l=>l.intensity=T.MathUtils.lerp(l.intensity,evening?2.3:1.4,speed));
+  corners.update(time,dt,nightSky.update(dt,evening));
   if(!reduced){dust.rotation.y=Math.sin(time*.000015)*.035;dust.position.y=Math.sin(time*.00011)*.04;curtains.forEach((c,i)=>{c.rotation.y=Math.sin(time*.0006+i)*.012})}renderer.render(scene,camera);if(!ready){ready=true;onReady()}}
  renderer.setAnimationLoop(frame);
- return{go,setEvening(value){evening=value},dispose(){disposed=true;renderer.setAnimationLoop(null);resize.disconnect();renderer.domElement.removeEventListener('pointerdown',down);renderer.domElement.removeEventListener('pointermove',move);renderer.domElement.removeEventListener('pointerup',up);renderer.domElement.removeEventListener('pointercancel',up);renderer.domElement.removeEventListener('wheel',wheel);host.removeEventListener('keydown',keydown);host.removeEventListener('keyup',keyup);host.removeEventListener('blur',blur);new Set(geometries).forEach(g=>g.dispose());new Set(materials).forEach(m=>m.dispose());new Set(textures).forEach(t=>t.dispose());renderer.dispose();renderer.domElement.remove()}};
+ return{go,setEvening(value){evening=value},setCandles:corners.setCandles,fillBowl:corners.fillBowl,setDrink:corners.setDrink,updateNote:corners.updateNote,setPlaying:corners.setPlaying,launchFireworks:nightSky.launch,dispose(){disposed=true;corners.dispose();nightSky.dispose();renderer.setAnimationLoop(null);resize.disconnect();renderer.domElement.removeEventListener('pointerdown',down);renderer.domElement.removeEventListener('pointermove',move);renderer.domElement.removeEventListener('pointerup',up);renderer.domElement.removeEventListener('pointercancel',up);renderer.domElement.removeEventListener('wheel',wheel);host.removeEventListener('keydown',keydown);host.removeEventListener('keyup',keyup);host.removeEventListener('blur',blur);new Set(geometries).forEach(g=>g.dispose());new Set(materials).forEach(m=>m.dispose());new Set(textures).forEach(t=>t.dispose());renderer.dispose();renderer.domElement.remove()}};
 }

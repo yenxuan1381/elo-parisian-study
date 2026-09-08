@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Armchair, BookOpen, Expand, HelpCircle, Home, LampDesk, Moon, Sun, ScanLine } from 'lucide-react';
+import { Armchair, BookOpen, Expand, FileText, HelpCircle, Home, LampDesk, Moon, ScanLine, Search, Sun, Volume2, VolumeX } from 'lucide-react';
 import type { RoomController } from './scene';
 const views = [{id:'room',label:'The room',Icon:Home},{id:'desk',label:'My desk',Icon:LampDesk},{id:'library',label:'The library',Icon:BookOpen},{id:'window',label:'By the window',Icon:Armchair}] as const;
 export default function Room(){
  const host = useRef<HTMLDivElement>(null); const controller = useRef<RoomController|null>(null);
- const [ready,setReady]=useState(false); const [error,setError]=useState(false); const [view,setView]=useState('room'); const [evening,setEvening]=useState(false); const [help,setHelp]=useState(false); const [toast,setToast]=useState('');
- useEffect(()=>{let stopped=false;import('./scene').then(({createRoom})=>{if(stopped||!host.current)return;controller.current=createRoom(host.current,()=>{if(!stopped)setReady(true)},(id)=>{setView(id)});}).catch(()=>{if(!stopped)setError(true)});return()=>{stopped=true;controller.current?.dispose()};},[]);
+ const [ready,setReady]=useState(false); const [error,setError]=useState(false); const [view,setView]=useState('room'); const [evening,setEvening]=useState(false); const [help,setHelp]=useState(false); const [toast,setToast]=useState(''); const [typing,setTyping]=useState(false); const [muted,setMuted]=useState(false);
+ useEffect(()=>{let stopped=false;import('./scene').then(({createRoom})=>{if(stopped||!host.current)return;controller.current=createRoom(host.current,()=>{if(!stopped)setReady(true)},(id)=>{setView(id)},()=>{},(active)=>{if(!stopped)setTyping(active)});}).catch(()=>{if(!stopped)setError(true)});return()=>{stopped=true;controller.current?.dispose()};},[]);
  useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(''),4000);return()=>clearTimeout(timer)},[toast]);
  const go=(id:string)=>{setView(id);controller.current?.go(id);host.current?.focus()};
  return <main className="room" aria-label="Élo’s immersive Parisian room">
@@ -21,6 +21,14 @@ export default function Room(){
   {help&&<aside className="help-card"><h2>Make yourself at home.</h2><p>Drag anywhere to look around. Scroll or pinch to move closer.</p><p>Use the places below to settle into a different corner. You can also click the desk, shelves, or reading chair.</p><p>On a keyboard: arrow keys look around; W and S move forward and back. Press Home to return.</p><button onClick={()=>setHelp(false)}>Back to the room</button></aside>}
   {toast&&<div className="toast" role="status">{toast}</div>}
   <div className="corner-note">Stay a little while</div>
-  <div className="bottom-ui"><p className="caption">{view==='desk'?'A place for a new idea.':view==='library'?'A few of my favorite things.':view==='window'?'Paris can wait.':'The afternoon is yours.'}</p><nav className="nav" aria-label="Places in the room">{views.map(({id,label,Icon})=><button key={id} aria-pressed={view===id} onClick={()=>go(id)}><Icon/><span>{label}</span></button>)}</nav><p className="hint"><ScanLine size={12} style={{display:'inline',verticalAlign:'-2px',marginRight:7}}/>Drag to look around · Scroll to move closer · Choose a corner</p></div>
+  {typing&&<output className="typing-bar">
+   <p>Go on — type your letter. <span>Enter</span> starts a new line, <span>Backspace</span> corrects, <span>Esc</span> steps back.</p>
+   <div className="typing-actions">
+    <button aria-pressed={view==='letter'} onClick={()=>go(view==='letter'?'typewriter':'letter')}><Search/><span>{view==='letter'?'The machine':'Read the page'}</span></button>
+    <button onClick={()=>{controller.current?.newSheet();host.current?.focus()}}><FileText/><span>New sheet</span></button>
+    <button aria-pressed={muted} onClick={()=>{setMuted(!muted);controller.current?.setMuted(!muted);host.current?.focus()}}>{muted?<VolumeX/>:<Volume2/>}<span>{muted?'Sound off':'Sound on'}</span></button>
+   </div>
+  </output>}
+  <div className="bottom-ui"><p className="caption">{view==='desk'?'A place for a new idea.':view==='library'?'A few of my favorite things.':view==='window'?'Paris can wait.':view==='typewriter'||view==='letter'?'A letter, one key at a time.':'The afternoon is yours.'}</p><nav className="nav" aria-label="Places in the room">{views.map(({id,label,Icon})=><button key={id} aria-pressed={view===id} onClick={()=>go(id)}><Icon/><span>{label}</span></button>)}</nav><p className="hint"><ScanLine size={12} style={{display:'inline',verticalAlign:'-2px',marginRight:7}}/>Drag to look around · Scroll to move closer · Choose a corner</p></div>
  </main>
 }

@@ -5,6 +5,7 @@ import { addNightSky } from './night-sky';
 import { TypewriterAudio } from './ambience';
 import { addRoomDetails } from './room-details';
 import type { Drink } from './room-settings';
+import { fittedDistance } from './typewriter-layout';
 
 export type RoomController = { go:(id:string)=>void; enter:()=>void; toggleDoor:()=>boolean; setEvening:(value:boolean)=>void; setTyping:(value:boolean)=>void; setMuted:(value:boolean)=>void; newSheet:()=>void; setCandles:(value:boolean)=>void; fillBowl:()=>void; setDrink:(id:Drink,progress:number)=>void; updateNote:(text:string)=>void; setPlaying:(value:boolean)=>void; launchFireworks:(color:string)=>boolean; dispose:()=>void };
 type Parent = T.Object3D;
@@ -170,13 +171,22 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
   next=next.slice(0,4000);
   if(next.length===note.length+1&&next.startsWith(note)){const ch=next.slice(-1);if(ch==='\n')corners.typewriter.carriageReturn();else corners.typewriter.write(ch);}
   else corners.typewriter.setText(next);
-  note=next;onNote(note);
+  note=next;onNote(note);if(typing)frameTypewriter();
  }
  function focusLens(){camera.fov=host.clientWidth/host.clientHeight<.8?72:58;camera.updateProjectionMatrix();}
  let yaw=0,pitch=0,goalYaw=0,goalPitch=0;const targetPosition=new T.Vector3();let traveling=false;let disposed=false;let evening=false;let lastTime=0;let ready=false;
  function setAngles(target:T.Vector3,pos:T.Vector3){const delta=target.clone().sub(pos);goalYaw=Math.atan2(delta.x,-delta.z);goalPitch=Math.atan2(delta.y,Math.hypot(delta.x,delta.z))}
+ function frameTypewriter(){
+  const bounds=corners.typewriter.framingBounds(),center=bounds.getCenter(new T.Vector3());
+  const outward=new T.Vector3(1,.24,0).normalize();
+  targetPosition.copy(center).addScaledVector(outward,fittedDistance(bounds,center,outward,camera.aspect,camera.fov));
+  setAngles(center,targetPosition);
+  while(goalYaw-yaw>Math.PI)goalYaw-=Math.PI*2;
+  while(goalYaw-yaw<-Math.PI)goalYaw+=Math.PI*2;
+  traveling=true;
+ }
  function setTyping(value:boolean){if(typing===value)return;typing=value;if(value)pressed.clear();else corners.typewriter.setShift(false);onTyping(value)}
- function go(id:string){setTyping(id==='typewriter'||id==='letter');const v=views[id]||views.room;targetPosition.fromArray(v.position);setAngles(new T.Vector3().fromArray(v.target),targetPosition);while(goalYaw-yaw>Math.PI)goalYaw-=Math.PI*2;while(goalYaw-yaw<-Math.PI)goalYaw+=Math.PI*2;traveling=true;if(reduced){camera.position.copy(targetPosition);yaw=goalYaw;pitch=goalPitch;traveling=false}onView(id)}
+ function go(id:string){setTyping(id==='typewriter'||id==='letter');const v=views[id]||views.room;targetPosition.fromArray(v.position);setAngles(new T.Vector3().fromArray(v.target),targetPosition);if(typing)frameTypewriter();while(goalYaw-yaw>Math.PI)goalYaw-=Math.PI*2;while(goalYaw-yaw<-Math.PI)goalYaw+=Math.PI*2;traveling=true;if(reduced){camera.position.copy(targetPosition);yaw=goalYaw;pitch=goalPitch;traveling=false}onView(id)}
  camera.position.fromArray(views.room.position);go('room');yaw=goalYaw;pitch=goalPitch;traveling=false;
  // Keep free motion inside the room and out of furniture; guided paths rise above obstructions.
  const obstacles=[{x:-.55,z:-.45,w:2.85,d:1.5},{x:-.65,z:1.2,w:1,d:1},{x:2.9,z:-2.75,w:1.2,d:1.3},{x:1.25,z:1.02,w:1,d:.8},{x:-1.47,z:-3.56,w:1.85,d:.9},{x:1.85,z:-2.95,w:.8,d:.8},{x:-.95,z:4.82,w:2.8,d:1.15},{x:-.9,z:3.38,w:1.16,d:.73},{x:3.6,z:2.08,w:.9,d:2.5},{x:1.71,z:4.97,w:1.8,d:.8},{x:-3.58,z:2.52,w:.85,d:1.75}];
@@ -202,7 +212,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
   }
   if(pointers.size===1){const p=[...pointers.values()][0];lastX=p.x;lastY=p.y}
  }
- function wheel(e:WheelEvent){e.preventDefault();walk(-T.MathUtils.clamp(e.deltaY,-70,70)*.003)}
+ function wheel(e:WheelEvent){e.preventDefault();if(!typing)walk(-T.MathUtils.clamp(e.deltaY,-70,70)*.003)}
  const pressed=new Set<string>();const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','w','s','W','S','Home'];
  function keydown(e:KeyboardEvent){
   if(typing){
@@ -219,7 +229,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  function keyup(e:KeyboardEvent){if(typing){corners.typewriter.setShift(e.shiftKey);return}pressed.delete(e.key.toLowerCase())}
  function blur(){pressed.clear();corners.typewriter.setShift(false)}
  renderer.domElement.addEventListener('pointerdown',down);renderer.domElement.addEventListener('pointermove',move);renderer.domElement.addEventListener('pointerup',up);renderer.domElement.addEventListener('pointercancel',up);renderer.domElement.addEventListener('wheel',wheel,{passive:false});host.addEventListener('keydown',keydown);host.addEventListener('keyup',keyup);host.addEventListener('blur',blur);
- const resize=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;focusLens();renderer.setSize(w,h)});resize.observe(host);
+ const resize=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;focusLens();renderer.setSize(w,h);if(typing)frameTypewriter()});resize.observe(host);
  const direction=new T.Vector3();
  function frame(time:number){if(disposed)return;const dt=Math.min((time-lastTime)/1000,.05);lastTime=time;const speed=1-Math.exp(-dt*5);if(pressed.has('arrowleft'))goalYaw-=dt*.7;if(pressed.has('arrowright'))goalYaw+=dt*.7;if(pressed.has('arrowup'))goalPitch=Math.min(.7,goalPitch+dt*.5);if(pressed.has('arrowdown'))goalPitch=Math.max(-.65,goalPitch-dt*.5);if(pressed.has('w'))walk(dt*.9);if(pressed.has('s'))walk(-dt*.9);
   if(traveling){camera.position.lerp(targetPosition,speed);if(camera.position.distanceTo(targetPosition)<.008)traveling=false}yaw+= (goalYaw-yaw)*speed;pitch+=(goalPitch-pitch)*speed;direction.set(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));camera.lookAt(camera.position.clone().add(direction));

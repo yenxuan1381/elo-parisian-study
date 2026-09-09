@@ -60,3 +60,34 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
  .room-header{padding:14px 20px}.brand{font-size:25px}.eyebrow{display:none}
  .nav button{padding:8px 10px}.caption{display:none}
 }
+
+/* Keep the moving carriage inside its own viewport, above the writing controls. */
+.is-typing{--writing-header:104px;--writing-footer:184px}
+.is-typing .scene{top:var(--writing-header);bottom:var(--writing-footer)}
+.is-typing .bottom-ui{bottom:16px;gap:8px}
+.is-typing .caption{font-size:15px;margin:0;color:#644740;text-shadow:none}
+.writing-actions{pointer-events:auto;flex-wrap:wrap;padding:8px 12px;margin:0;background:#fff3e5f5;border:1px solid #d5bfab;border-radius:8px;box-shadow:0 4px 20px #3d271718;max-width:100%}
+.writing-actions .letter-count{margin-right:8px;font-variant-numeric:tabular-nums}
+.paper-editor{display:block;width:100%;min-height:260px;height:38dvh;resize:vertical;border:0;border-top:1px solid #d5bfab;border-bottom:1px solid #d5bfab;background:#f1e6cf;color:#3b302b;padding:22px 18px;font:16px/1.9 'Courier New',monospace;overflow:auto;white-space:pre-wrap}
+.room-dialog.paper-dialog[data-slot=dialog-content]{width:min(640px,calc(100vw - 32px));max-width:640px}
+.is-evening.is-typing .caption{color:#fff1dd}
+@media(max-width:780px){
+ .is-typing{--writing-header:92px;--writing-footer:246px}
+ .is-typing .writing-actions{width:min(460px,100%);gap:5px;padding:8px}
+ .is-typing .writing-actions .letter-count{flex-basis:100%;text-align:center;margin:0;font-size:11px}
+ .writing-actions .primary-button,.writing-actions .quiet-button{padding:10px;font-size:12px;gap:6px}
+ .is-typing .caption{font-size:13px}
+}
+@media(max-width:380px){
+ .paper-edit span{display:none}
+ .writing-actions .paper-edit{width:40px;padding:0}
+}
+@media(max-height:560px){
+ .is-typing{--writing-header:64px;--writing-footer:112px}
+ .is-typing .bottom-ui{bottom:8px;gap:4px}
+ .is-typing .caption,.is-typing .writing-actions .letter-count{display:none}
+ .is-typing .writing-actions{width:auto;padding:4px 8px}
+ .is-typing .nav{display:flex;width:auto}
+ .is-typing .nav button{padding:8px;min-height:36px;font-size:11px}
+ .is-typing .nav button svg{display:none}
+}

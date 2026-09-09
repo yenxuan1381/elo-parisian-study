@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { columns as COLS, layoutLetter, pageMetrics, pageTitle } from './typewriter-layout';
 
 // A working machine: keys depress, a typebar swings up to the print point, the carriage
 // steps left a character at a time, a bell warns near the margin, and the return rolls
@@ -20,18 +21,17 @@ export type Typewriter = {
  write:(ch:string)=>void; erase:()=>void; carriageReturn:()=>void; loadSheet:()=>void;
  setShift:(value:boolean)=>void; setText:(text:string)=>void; text:()=>string;
  update:(dt:number)=>void;
+ framingBounds:()=>T.Box3;
 };
 
 // Page metrics. The canvas is the sheet itself, so a character's place on the page and
 // the carriage position that puts it under the type guide come from the same numbers.
-const PX=2000,SHEET_W=.4,SHEET_H=.44,W=SHEET_W*PX,H=SHEET_H*PX;
-const MARGIN=64,CHAR_PX=14.4,TOP_PX=96,LINE_PX=34;
-const COLS=Math.floor((W-MARGIN*2)/CHAR_PX),ROWS=Math.floor((H-TOP_PX-58)/LINE_PX);
+const {pixels:PX,width:W,margin:MARGIN,character:CHAR_PX,top:TOP_PX,line:LINE_PX}=pageMetrics;
+const SHEET_W=W/PX;
 const CHAR_W=CHAR_PX/PX,LINE_STEP=LINE_PX/PX;
-const PRINT_Y=.285,PRINT_Z=-.085,LEAN=.35;
+const PRINT_Y=.285,PRINT_Z=-.085,LEAN=.12;
 // The sheet sits so the line being typed lands on the print point: everything above it on
 // the page has already rolled through, so the paper grows upward as the letter gets longer.
-const SHEET_REST=.19;
 const CARRIAGE_X0=(W/2-MARGIN-CHAR_PX/2)/PX;
 const BAR_L=.15,BAR_REST=1.15,BAR_COUNT=42,BELL_AT=COLS-8;
 const PAPER='#f1e6cf',KEY_ROWS=['zxcvbnm,.?','asdfghjkl;','qwertyuiop','1234567890'];
@@ -40,7 +40,7 @@ export type TypewriterSound = {strike:()=>void; space:()=>void; bell:()=>void; c
 const silent:TypewriterSound={strike(){},space(){},bell(){},carriage(){},sheet(){}};
 
 export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:number,audio:TypewriterSound=silent):Typewriter{
- const {materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,brass,ink,rose,random,reduced}=c;
+ const {materials,textures,geometries,group,box,cylinder,sphere,rod,plain,brass,ink,rose,random,reduced}=c;
  const root=group(parent,x,y,z);root.scale.setScalar(.9);root.userData.activity='typewriter';
  const shell=plain('#e6d6c0',.3,.12),petal=plain('#ead7ce',.32),steel=plain('#a5aaa5',.27,.72),felt=plain('#542d37',.95);
 
@@ -143,13 +143,22 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
 
  // The sheet is its own canvas: the part that has rolled past the guide is opaque paper,
  // the rest is still behind the platen and stays clear.
- const page=document.createElement('canvas');page.width=W;page.height=H;
- const pctx=page.getContext('2d')!;
- const pageTex=new T.CanvasTexture(page);pageTex.colorSpace=T.SRGBColorSpace;textures.push(pageTex);
- const pageMat=new T.MeshStandardMaterial({map:pageTex,transparent:true,roughness:1,side:T.DoubleSide});materials.push(pageMat);
- const sheetGeo=new T.PlaneGeometry(SHEET_W,SHEET_H);geometries.push(sheetGeo);
  const paper=group(carriage,0,PRINT_Y,PRINT_Z);paper.rotation.x=-LEAN;
- const sheet=new T.Mesh(sheetGeo,pageMat);sheet.position.y=SHEET_REST;paper.add(sheet);
+ const sheet=group(paper);
+ // Small texture strips allow a continuous sheet of any length without exceeding
+ // mobile GPU texture limits. Their edges share one uninterrupted paper surface.
+ const TILE=1024;
+ const sheetGeo=new T.PlaneGeometry(SHEET_W,1);geometries.push(sheetGeo);
+ const tiles:{canvas:HTMLCanvasElement;ctx:CanvasRenderingContext2D;texture:T.CanvasTexture;mesh:T.Mesh<T.PlaneGeometry,T.MeshStandardMaterial>}[]=[];
+ function tileAt(index:number){
+  if(tiles[index])return tiles[index];
+  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=TILE;
+  const ctx=canvas.getContext('2d')!;
+  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;texture.generateMipmaps=false;texture.minFilter=T.LinearFilter;textures.push(texture);
+  const material=new T.MeshStandardMaterial({map:texture,transparent:true,roughness:1,side:T.DoubleSide});materials.push(material);
+  const mesh=new T.Mesh(sheetGeo,material);sheet.add(mesh);
+  const tile={canvas,ctx,texture,mesh};tiles.push(tile);return tile;
+ }
  // The rest of the sheet is still wound on the platen: a paper-width ribbon that leaves
  // the roller on the tangent the page stands on, so the page reads as rolled in rather
  // than resting on top. It sits a hair inside the page plane so the two never z-fight.
@@ -157,8 +166,8 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  const PLATEN_Y=.243,PLATEN_Z=-.128,ROLL_R=.0533,TANGENT=Math.atan2(Math.cos(LEAN),Math.sin(LEAN));
  const spine:number[][]=[];
  {
-  const ty=PLATEN_Y+ROLL_R*Math.cos(TANGENT),tz=PLATEN_Z+ROLL_R*Math.sin(TANGENT);
-  spine.push([ty+Math.cos(LEAN)*.085,tz-Math.sin(LEAN)*.085]);
+  // End below the first printable line: the old extension covered the ink.
+  spine.push([PRINT_Y-Math.cos(LEAN)*pageMetrics.bottom/PX,PRINT_Z+Math.sin(LEAN)*pageMetrics.bottom/PX-.0003]);
   for(let i=0;i<=28;i++){const a=TANGENT+(-2-TANGENT)*(i/28);spine.push([PLATEN_Y+ROLL_R*Math.cos(a),PLATEN_Z+ROLL_R*Math.sin(a)]);}
  }
  const rollGeo=new T.BufferGeometry();
@@ -175,31 +184,35 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
  // Bell, struck a few characters before the right margin.
  const bell=group(root,.215,.155,-.03);sphere(bell,.03,0,0,0,brass,1,.72,1);cylinder(bell,.004,.004,.03,0,-.02,0,brass);
 
- let line=0,col=0,rung=false,shifted=false;
+ let rawText='',line=0,col=0,rung=false,shifted=false;
  const written:string[]=[''];
  const strikes:{bar:number;cap:T.Object3D|null;rest:number;t:number}[]=[];
  let carriageGoal=CARRIAGE_X0,rise=0,riseGoal=0,roll=0,rollGoal=0,leverSwing=0,bellRing=0,eject=0;
 
- const cellX=(column:number)=>MARGIN+column*CHAR_PX+CHAR_PX/2;
- const cellY=(row:number)=>TOP_PX+row*LINE_PX+LINE_PX/2;
- function feed(row:number){
-  if(row===0){pctx.fillStyle=PAPER;pctx.fillRect(0,0,W,H);pctx.fillStyle='#b6a187';pctx.font='16px Georgia';pctx.textAlign='center';pctx.fillText('MY PARISIAN DREAM',W/2,37);}
-  pageTex.needsUpdate=true;
- }
- function ink1(row:number,column:number,ch:string){
-  if(ch===' ')return;
-  pctx.save();pctx.translate(cellX(column)+(random()-.5)*.9,cellY(row)+(random()-.5)*1.3);
-  pctx.rotate((random()-.5)*.05);
-  pctx.fillStyle=`rgba(45,38,35,${.86+random()*.14})`;
-  pctx.textAlign='center';pctx.textBaseline='middle';pctx.font='24px "Courier New",monospace';
-  pctx.fillText(ch,0,0);pctx.restore();pageTex.needsUpdate=true;
- }
  function redraw(){
-  pctx.clearRect(0,0,W,H);
-  for(let row=0;row<=Math.min(line,ROWS-1);row++)feed(row);
-  written.forEach((text,row)=>Array.from(text).forEach((ch,column)=>ink1(row,column,ch)));
+  const baseline=TOP_PX+line*LINE_PX+LINE_PX/2,height=baseline+pageMetrics.bottom;
+  const count=Math.ceil(height/TILE);
+  for(let i=0;i<count;i++){
+   const {canvas,ctx,texture,mesh}=tileAt(i),offset=i*TILE,tileHeight=Math.min(TILE,height-offset);
+   if(canvas.height!==tileHeight){canvas.height=tileHeight;texture.dispose();}
+   ctx.fillStyle=PAPER;ctx.fillRect(0,0,W,tileHeight);
+   ctx.save();ctx.translate(0,-offset);
+   ctx.fillStyle='#794951';ctx.font='28px Georgia';ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText(pageTitle,W/2,54,W-MARGIN*2);
+   ctx.strokeStyle='#c9ac8c';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(MARGIN,84);ctx.lineTo(W-MARGIN,84);ctx.stroke();
+   ctx.font='24px "Courier New",monospace';ctx.textBaseline='middle';ctx.fillStyle='#3b302b';
+   written.forEach((text,row)=>{
+    const cy=TOP_PX+row*LINE_PX+LINE_PX/2;
+    if(cy+LINE_PX/2<offset||cy-LINE_PX/2>offset+tileHeight)return;
+    Array.from(text).forEach((ch,column)=>ctx.fillText(ch,MARGIN+column*CHAR_PX+CHAR_PX/2,cy));
+   });
+   ctx.restore();texture.needsUpdate=true;mesh.visible=true;
+   mesh.scale.y=tileHeight/PX;
+   // The last baseline always meets the type guide. Each return adds paper above it.
+   mesh.position.y=(TOP_PX+LINE_PX/2-offset-tileHeight/2)/PX;
+  }
+  tiles.slice(count).forEach(tile=>{tile.mesh.visible=false});
  }
- feed(0);
+ redraw();
 
  function swing(ch:string){
   const key=keys.get(ch.toLowerCase());
@@ -207,61 +220,46 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
   else strikes.push({bar:Math.floor(random()*BAR_COUNT),cap:null,rest:0,t:0});
   if(strikes.length>6)strikes.shift();
  }
- function step(){
-  col++;carriageGoal=CARRIAGE_X0-col*CHAR_W;
-  if(col>=BELL_AT&&!rung){rung=true;bellRing=1;audio.bell()}
-  if(col>=COLS)wrap();
- }
- // At the margin the machine returns on its own, carrying a part-typed word over rather
- // than splitting it, which is what you would do by hand anyway.
- function wrap(){
-  const text=written[line],at=text.lastIndexOf(' ');
-  const carry=at>0&&text.length-at<=16?text.slice(at+1):'';
-  if(carry)written[line]=text.slice(0,at);
-  carriageReturn();
-  if(!carry||eject)return;
-  written[line]=carry;col=carry.length;carriageGoal=CARRIAGE_X0-col*CHAR_W;rung=col>=BELL_AT;redraw();
- }
  function carriageReturn(){
-  if(line+1>=ROWS){written.shift();line--;redraw()}
-  line++;col=0;rung=false;written[line]='';
-  carriageGoal=CARRIAGE_X0;riseGoal=Math.min(line,3)*LINE_STEP;rollGoal=roll+LINE_STEP/.047;
-  leverSwing=1;feed(line);audio.carriage();
+  if(!eject)setText(rawText+'\n');
  }
  function loadSheet(){if(eject)return;eject=1;audio.sheet()}
  function write(ch:string){
   if(eject)return;
-  if(ch===' '){written[line]+=' ';audio.space();spaceBar.position.y=spaceRest-.006;step();return}
-  if(ch.length!==1||ch.charCodeAt(0)<32)return;
-  written[line]+=ch;ink1(line,col,ch);swing(ch);audio.strike();step();
+  if(Array.from(ch).length!==1||ch.charCodeAt(0)<32)return;
+  setText(rawText+ch);
+  if(ch===' '){audio.space();spaceBar.position.y=spaceRest-.006;return}
+  swing(ch);audio.strike();
  }
  function erase(){
   if(eject)return;
-  if(!written[line].length){if(line){written.pop();line--;col=written[line].length;carriageGoal=CARRIAGE_X0-col*CHAR_W;riseGoal=line*LINE_STEP;redraw()}return;}
-  written[line]=written[line].slice(0,-1);col=Math.max(0,col-1);
-  carriageGoal=CARRIAGE_X0-col*CHAR_W;rung=col>=BELL_AT;
-  pctx.fillStyle=PAPER;pctx.fillRect(cellX(col)-CHAR_PX/2-1,cellY(line)-LINE_PX/2,CHAR_PX+2,LINE_PX);
-  pageTex.needsUpdate=true;audio.space();
+  setText(Array.from(rawText).slice(0,-1).join(''));audio.space();
  }
  function setText(text:string){
-  const lines:string[]=[];
-  for(const paragraph of text.replace(/\r/g,'').split('\n')){
-   let remaining=paragraph;
-   while(remaining.length>COLS){let at=remaining.lastIndexOf(' ',COLS);if(at<1)at=COLS;lines.push(remaining.slice(0,at));remaining=remaining.slice(at+(remaining[at]===' '?1:0));}
-   lines.push(remaining);
-  }
-  written.length=0;written.push(...lines.slice(-ROWS));line=written.length-1;col=written[line].length;rung=col>=BELL_AT;eject=0;pageMat.opacity=1;
-  carriageGoal=CARRIAGE_X0-col*CHAR_W;rise=riseGoal=Math.min(line,3)*LINE_STEP;redraw();
+  const next=layoutLetter(text),previousLine=line;
+  rawText=text;written.length=0;written.push(...next.lines);line=next.row;col=next.column;eject=0;
+  tiles.forEach(tile=>{tile.mesh.material.opacity=1});
+  carriageGoal=CARRIAGE_X0-col*CHAR_W;riseGoal=line*LINE_STEP;
+  rollGoal+=((line-previousLine)*LINE_STEP)/.047;
+  if(line>previousLine){leverSwing=1;audio.carriage()}
+  if(col>=BELL_AT&&!rung){bellRing=1;audio.bell()}
+  rung=col>=BELL_AT;redraw();
  }
 
  return {
-  root,write,erase,carriageReturn,loadSheet,text:()=>written.join('\n').trimEnd(),setText,
+  root,write,erase,carriageReturn,loadSheet,text:()=>rawText,setText,
+  framingBounds(){
+   root.updateWorldMatrix(true,false);
+   // Reserve the entire carriage stroke so typing never pushes a side off screen.
+   const top=PRINT_Y+(TOP_PX+LINE_PX/2+line*LINE_PX)/PX*Math.cos(LEAN);
+   return new T.Box3(new T.Vector3(-.61,0,Math.min(-.24,PRINT_Z-(top-PRINT_Y)*Math.tan(LEAN))),new T.Vector3(.61,top,.27)).applyMatrix4(root.matrixWorld);
+  },
   setShift(value){shifted=value},
   update(dt){
    const ease=1-Math.exp(-dt*(reduced?60:9));
    carriage.position.x+=(carriageGoal-carriage.position.x)*(reduced?1:1-Math.exp(-dt*16));
    rise+=(riseGoal-rise)*ease;roll+=(rollGoal-roll)*ease;
-   platenRoll.rotation.x=roll;sheet.position.y=SHEET_REST+rise;rolled.visible=!eject;
+   platenRoll.rotation.x=roll;sheet.position.y=rise;rolled.visible=!eject;
    // The basket lifts a little while a shift key is held, as the segment shift does.
    for(const s of shifts)s.position.y+=((shifted?.079:.085)-s.position.y)*ease;
    spaceBar.position.y+=(spaceRest-spaceBar.position.y)*(1-Math.exp(-dt*14));
@@ -281,12 +279,12 @@ export function addTypewriter(c:TypewriterContext,parent:P,x:number,y:number,z:n
    if(leverSwing>0){leverSwing=Math.max(0,leverSwing-dt*3.4);lever.rotation.x=-Math.sin(leverSwing*Math.PI)*.5}
    if(eject>0){
     eject=Math.max(0,eject-dt*(reduced?6:.9));
-    sheet.position.y=SHEET_REST+rise+(1-eject)*.34;
-    pageMat.opacity=Math.min(1,eject*1.6);
+    sheet.position.y=rise+(1-eject)*.34;
+    tiles.forEach(tile=>{tile.mesh.material.opacity=Math.min(1,eject*1.6)});
     if(!eject){
-     written.length=0;written.push('');line=0;col=0;rung=false;
+     rawText='';written.length=0;written.push('');line=0;col=0;rung=false;
      rise=riseGoal=0;roll=rollGoal=0;carriage.position.x=carriageGoal=CARRIAGE_X0;
-     sheet.position.y=SHEET_REST;pageMat.opacity=1;redraw();
+     sheet.position.y=0;tiles.forEach(tile=>{tile.mesh.material.opacity=1});redraw();
     }
    }
   },

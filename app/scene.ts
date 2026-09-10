@@ -6,6 +6,7 @@ import { TypewriterAudio } from './ambience';
 import { addRoomDetails } from './room-details';
 import type { Drink } from './room-settings';
 import { fittedDistance } from './typewriter-layout';
+import { addRoomAtmosphere } from './room-atmosphere';
 
 export type RoomController = { go:(id:string)=>void; enter:()=>void; toggleDoor:()=>boolean; setEvening:(value:boolean)=>void; setTyping:(value:boolean)=>void; setMuted:(value:boolean)=>void; newSheet:()=>void; setCandles:(value:boolean)=>void; fillBowl:()=>void; setDrink:(id:Drink,progress:number)=>void; updateNote:(text:string)=>void; setPlaying:(value:boolean)=>void; launchFireworks:(color:string)=>boolean; dispose:()=>void };
 type Parent = T.Object3D;
@@ -15,18 +16,18 @@ const views:Record<string,View> = {
  desk:{position:[-.6,1.8,1.45],target:[-.65,1.35,-.85]},
  library:{position:[-1.65,1.9,.4],target:[-3.8,1.9,-1.8]},
  window:{position:[1.6,1.7,-1.15],target:[2.12,4.15,-9]},
- nook:{position:[.85,2.05,2.65],target:[-.85,1.7,4.85]},
- drinks:{position:[.5,2.05,2.15],target:[3.8,1.85,1.2]},
+ nook:{position:[.45,1.78,2.3],target:[-.95,1.05,4.82]},
+ drinks:{position:[1.4,1.82,2.08],target:[3.6,1.46,2.08]},
  typewriter:{position:[-2.68,1.33,2.52],target:[-3.56,1.19,2.52]},
  letter:{position:[-3.3,1.2,2.52],target:[-3.63,1.13,2.52]},
  entrance:{position:[.6,1.85,3.46],target:[4.1,1.55,4.37]},
- music:{position:[1.78,1.75,3.25],target:[1.71,1.25,4.97]},
- travel:{position:[-.8,2.7,3.35],target:[-.8,2.8,5.4]},
+ music:{position:[1.71,1.7,3.1],target:[1.71,1.22,4.97]},
+ travel:{position:[-.8,2.72,2.65],target:[-.8,2.89,5.4]},
  candles:{position:[2.21,1.91,-.1],target:[3.94,1.77,-.37]},
  cat:{position:[2.62,1.5,4.36],target:[3.26,.13,5.14]},
 };
 
-export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:string)=>void,onInteract:(id:string,detail?:string)=>void=()=>{},onTyping:(active:boolean)=>void=()=>{},onNote:(text:string)=>void=()=>{}):RoomController{
+export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:string)=>void,onInteract:(id:string,detail?:string)=>void=()=>{},onTyping:(active:boolean)=>void=()=>{},onNote:(text:string)=>void=()=>{},onHint:(hint:{text:string;x:number;y:number}|null)=>void=()=>{}):RoomController{
  const scene=new T.Scene();scene.background=new T.Color('#e4bfa6');scene.fog=new T.Fog('#e4bfa6',14,34);
  const camera=new T.PerspectiveCamera(58,host.clientWidth/host.clientHeight,.04,70);
  const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -45,7 +46,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
   if(kind==='wood'){for(let j=0;j<80;j++){cx.strokeStyle=`rgba(61,32,17,${random()*.16})`;cx.lineWidth=.35;cx.beginPath();const y=random()*256;cx.moveTo(0,y);cx.bezierCurveTo(80,y+random()*12,160,y-random()*10,256,y+random()*4);cx.stroke()}}
   if(kind==='fabric'){cx.globalAlpha=.1;cx.strokeStyle='#fff5df';for(let j=0;j<256;j+=3){cx.beginPath();cx.moveTo(j,0);cx.lineTo(j,256);cx.moveTo(0,j);cx.lineTo(256,j);cx.stroke()}}
   const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;tex.wrapS=tex.wrapT=T.RepeatWrapping;textures.push(tex);
-  const mat=new T.MeshStandardMaterial({map:tex,roughness:kind==='wood'?.8:1,metalness:0});materials.push(mat);return mat;
+  const mat=new T.MeshStandardMaterial({map:tex,bumpMap:tex,bumpScale:kind==='wood'?.008:kind==='fabric'?.004:.0015,roughness:kind==='wood'?.76:1,metalness:0});materials.push(mat);return mat;
  }
  function plain(color:string,roughness=.75,metalness=0){const m=new T.MeshStandardMaterial({color,roughness,metalness});materials.push(m);return m}
  const plaster=surface('#dcb2a0'),cream=surface('#e7d7bb'),wood=surface('#966641','wood'),darkWood=surface('#634630','wood'),lightWood=surface('#b38b62','wood');
@@ -54,7 +55,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  const boxGeometry=geom('box',()=>new T.BoxGeometry(1,1,1));
  function box(p:Parent,w:number,h:number,d:number,x:number,y:number,z:number,m:T.Material,round=0){const g=round?geom(`rounded${w},${h},${d},${round}`,()=>new RoundedBoxGeometry(w,h,d,2,round)):boxGeometry;const o=mesh(g,m,p,x,y,z);if(!round)o.scale.set(w,h,d);return o}
  function cylinder(p:Parent,rt:number,rb:number,h:number,x:number,y:number,z:number,m:T.Material,segments=16){return mesh(geom(`cyl${rt},${rb},${h},${segments}`,()=>new T.CylinderGeometry(rt,rb,h,segments)),m,p,x,y,z)}
- function sphere(p:Parent,r:number,x:number,y:number,z:number,m:T.Material,sx=1,sy=1,sz=1){const o=mesh(geom('sphere',()=>new T.SphereGeometry(1,12,8)),m,p,x,y,z);o.scale.set(r*sx,r*sy,r*sz);return o}
+ function sphere(p:Parent,r:number,x:number,y:number,z:number,m:T.Material,sx=1,sy=1,sz=1){const o=mesh(geom('sphere',()=>new T.SphereGeometry(1,20,14)),m,p,x,y,z);o.scale.set(r*sx,r*sy,r*sz);return o}
  function group(p:Parent,x=0,y=0,z=0,rot=0){const g=new T.Group();g.position.set(x,y,z);g.rotation.y=rot;p.add(g);return g}
  function rod(p:Parent,a:number[],b:number[],radius:number,m:T.Material){const from=new T.Vector3(...a),to=new T.Vector3(...b);const o=cylinder(p,radius,radius,from.distanceTo(to),0,0,0,m,8);o.position.copy(from.add(to).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(...b).sub(new T.Vector3(...a)).normalize());return o}
  const edgeMaterial=new T.LineBasicMaterial({color:'#5a3d2e',transparent:true,opacity:.24});materials.push(edgeMaterial);
@@ -90,7 +91,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  for(let x=-.5;x<4;x+=.45){const tor=mesh(geom('balconyRing',()=>new T.TorusGeometry(.16,.012,5,24)),ink,scene,x,1.16,-4.92);tor.castShadow=false}
  const curtainGeo=new T.PlaneGeometry(1.1,3.77,18,30);const cp=curtainGeo.attributes.position;
  for(let i=0;i<cp.count;i++){const x=cp.getX(i),y=cp.getY(i);cp.setZ(i,Math.sin((x+.55)*Math.PI*9)*.065+Math.sin(y*2)*.025);cp.setX(i,x*(.62+.38*Math.pow(Math.abs(y)/1.89,1.3)))}curtainGeo.computeVertexNormals();geometries.push(curtainGeo);
- const curtainMat=surface('#dab1a0','fabric');curtainMat.side=T.DoubleSide;
+ const curtainMat=surface('#dab1a0','fabric');curtainMat.side=T.DoubleSide;curtainMat.roughness=.94;
  const curtains=[mesh(curtainGeo,curtainMat,scene,-.33,2.36,-3.92),mesh(curtainGeo,curtainMat,scene,3.62,2.36,-3.92)];
  rod(scene,[-1,4.36,-3.84],[4,4.36,-3.84],.03,brass);
  for(const x of [-.33,3.62]){for(let i=0;i<7;i++)sphere(scene,.037,x-.42+i*.14,4.28,-3.86,brass);rod(scene,[x-.27,1.85,-3.84],[x+.27,1.85,-3.84],.025,brass)}
@@ -158,13 +159,14 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  plant(scene,-3.35,0,1.05,2.25);plant(scene,3.7,0,-3.6,2.4);plant(scene,-3.55,0,-3.62,1.2);
  const basket=group(desk,.58,0,-.05);cylinder(basket,.22,.17,.4,0,.2,0,lightWood);for(let i=0;i<9;i++){const ring=mesh(geom('basketRing',()=>new T.TorusGeometry(.205,.008,5,24)),darkWood,basket,0,.04+i*.04,0);ring.rotation.x=Math.PI/2;ring.scale.setScalar(.83+i*.017)}for(let i=0;i<3;i++){const roll=cylinder(basket,.032,.032,.49,i*.075-.065,.3,0,paper);roll.rotation.z=(i-1)*.16}
  // Warm sunlight, soft local lamps, and drifting dust in the window light.
- const ambient=new T.HemisphereLight('#fff1d6','#987a69',2.1);scene.add(ambient);
+ const ambient=new T.HemisphereLight('#fff1d6','#8c7369',1.45);scene.add(ambient);
  const sun=new T.DirectionalLight('#ffe0a5',3.6);sun.position.set(4,5.4,-8);sun.target.position.set(-2,0,2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.normalBias=.035;sun.shadow.bias=-.0004;sun.shadow.radius=4;scene.add(sun,sun.target);
  const fill=new T.DirectionalLight('#f1c0b3',.8);fill.position.set(2,3,4);scene.add(fill);
  const dustGeo=new T.BufferGeometry();const dustPositions=new Float32Array(100*3);for(let i=0;i<100;i++){dustPositions[i*3]=random()*6-2;dustPositions[i*3+1]=random()*4;dustPositions[i*3+2]=random()*7-4}dustGeo.setAttribute('position',new T.BufferAttribute(dustPositions,3));geometries.push(dustGeo);const dustMat=new T.PointsMaterial({color:'#fff0c9',size:.013,transparent:true,opacity:.45,depthWrite:false});materials.push(dustMat);const dust=new T.Points(dustGeo,dustMat);scene.add(dust);
  const typewriterAudio=new TypewriterAudio();
  const corners=addDreamCorners({scene,materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,chair,plant,bookStack,lamp,wood,darkWood,lightWood,rose,blush,linen,cream,ivory,brass,ink,paper,sage,ceramic,random,reduced},typewriterAudio);
  const details=addRoomDetails({scene,materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,brass,ink,rose,random,reduced,wood,cream,ivory,green});
+ addRoomAtmosphere({scene,materials,textures,geometries,group,box,cylinder,sphere,rod,surface,plain,brass,ink,rose,random,reduced,wood,paper,linen});
  const nightSky=addNightSky(scene,textures,materials,geometries,reduced);
  let typing=false,note='';
  function updateNote(next:string){
@@ -186,14 +188,14 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
   traveling=true;
  }
  function setTyping(value:boolean){if(typing===value)return;typing=value;if(value)pressed.clear();else corners.typewriter.setShift(false);onTyping(value)}
- function go(id:string){setTyping(id==='typewriter'||id==='letter');const v=views[id]||views.room;targetPosition.fromArray(v.position);setAngles(new T.Vector3().fromArray(v.target),targetPosition);if(typing)frameTypewriter();while(goalYaw-yaw>Math.PI)goalYaw-=Math.PI*2;while(goalYaw-yaw<-Math.PI)goalYaw+=Math.PI*2;traveling=true;if(reduced){camera.position.copy(targetPosition);yaw=goalYaw;pitch=goalPitch;traveling=false}onView(id)}
+ function go(id:string){onHint(null);setTyping(id==='typewriter'||id==='letter');const v=views[id]||views.room;targetPosition.fromArray(v.position);setAngles(new T.Vector3().fromArray(v.target),targetPosition);if(typing)frameTypewriter();while(goalYaw-yaw>Math.PI)goalYaw-=Math.PI*2;while(goalYaw-yaw<-Math.PI)goalYaw+=Math.PI*2;traveling=true;if(reduced){camera.position.copy(targetPosition);yaw=goalYaw;pitch=goalPitch;traveling=false}onView(id)}
  camera.position.fromArray(views.room.position);go('room');yaw=goalYaw;pitch=goalPitch;traveling=false;
  // Keep free motion inside the room and out of furniture; guided paths rise above obstructions.
  const obstacles=[{x:-.55,z:-.45,w:2.85,d:1.5},{x:-.65,z:1.2,w:1,d:1},{x:2.9,z:-2.75,w:1.2,d:1.3},{x:1.25,z:1.02,w:1,d:.8},{x:-1.47,z:-3.56,w:1.85,d:.9},{x:1.85,z:-2.95,w:.8,d:.8},{x:-.95,z:4.82,w:2.8,d:1.15},{x:-.9,z:3.38,w:1.16,d:.73},{x:3.6,z:2.08,w:.9,d:2.5},{x:1.71,z:4.97,w:1.8,d:.8},{x:-3.58,z:2.52,w:.85,d:1.75}];
  function walk(distance:number){traveling=false;const nx=camera.position.x+Math.sin(yaw)*distance,nz=camera.position.z-Math.cos(yaw)*distance;if(nx< -3.2||nx>3.75||nz< -3.85||nz>5)return;const hit=obstacles.some(o=>Math.abs(nx-o.x)<o.w/2+.1&&Math.abs(nz-o.z)<o.d/2+.1);if(!hit){camera.position.x=nx;camera.position.z=nz;targetPosition.copy(camera.position)}}
  const pointers=new Map<number,{x:number;y:number}>();let startX=0,startY=0,lastX=0,lastY=0,moved=false,pinch=0;const ray=new T.Raycaster();
  function down(e:PointerEvent){host.focus();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});renderer.domElement.setPointerCapture(e.pointerId);startX=lastX=e.clientX;startY=lastY=e.clientY;moved=false;traveling=false;if(pointers.size===2){const p=[...pointers.values()];pinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)}}
- function move(e:PointerEvent){if(!pointers.has(e.pointerId)){const hit=pick(e);renderer.domElement.style.cursor=hit?'pointer':'grab';return;}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(Math.hypot(e.clientX-startX,e.clientY-startY)>5)moved=true;if(pointers.size===2){const p=[...pointers.values()];const length=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);walk((length-pinch)*.009);pinch=length;moved=true;return}goalYaw-=(e.clientX-lastX)*.003;goalPitch=T.MathUtils.clamp(goalPitch+(e.clientY-lastY)*.0025,-.65,.7);lastX=e.clientX;lastY=e.clientY}
+ function move(e:PointerEvent){if(!pointers.has(e.pointerId)){const hit=pick(e);renderer.domElement.style.cursor=hit?'pointer':'grab';const names:Record<string,string>={drinks:'Make something warm',gift:'A cup for Emily',music:'Choose a record',travel:'A little travel daydream',reading:'Put your feet up',candles:'A softer kind of light',cat:'A little kindness',door:'Come on in',typewriter:'Leave Emily a letter',library:'Between the pages',window:'Watch Paris'};const id=hit?.activity||hit?.destination;onHint(id&&!typing?{text:names[id]||'Take a closer look',x:Math.max(12,Math.min(host.clientWidth-190,e.clientX+14)),y:Math.max(100,e.clientY-50)}:null);return;}onHint(null);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(Math.hypot(e.clientX-startX,e.clientY-startY)>5)moved=true;if(pointers.size===2){const p=[...pointers.values()];const length=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);walk((length-pinch)*.009);pinch=length;moved=true;return}goalYaw-=(e.clientX-lastX)*.003;goalPitch=T.MathUtils.clamp(goalPitch+(e.clientY-lastY)*.0025,-.65,.7);lastX=e.clientX;lastY=e.clientY}
  function pick(e:PointerEvent){
   const bounds=renderer.domElement.getBoundingClientRect();
   ray.setFromCamera(new T.Vector2((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1),camera);
@@ -233,7 +235,7 @@ export function createRoom(host:HTMLDivElement,onReady:()=>void,onView:(id:strin
  const direction=new T.Vector3();
  function frame(time:number){if(disposed)return;const dt=Math.min((time-lastTime)/1000,.05);lastTime=time;const speed=1-Math.exp(-dt*5);if(pressed.has('arrowleft'))goalYaw-=dt*.7;if(pressed.has('arrowright'))goalYaw+=dt*.7;if(pressed.has('arrowup'))goalPitch=Math.min(.7,goalPitch+dt*.5);if(pressed.has('arrowdown'))goalPitch=Math.max(-.65,goalPitch-dt*.5);if(pressed.has('w'))walk(dt*.9);if(pressed.has('s'))walk(-dt*.9);
   if(traveling){camera.position.lerp(targetPosition,speed);if(camera.position.distanceTo(targetPosition)<.008)traveling=false}yaw+= (goalYaw-yaw)*speed;pitch+=(goalPitch-pitch)*speed;direction.set(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));camera.lookAt(camera.position.clone().add(direction));
-  sun.intensity=T.MathUtils.lerp(sun.intensity,evening?.05:3.6,speed);ambient.intensity=T.MathUtils.lerp(ambient.intensity,evening?.42:2.1,speed);fill.intensity=T.MathUtils.lerp(fill.intensity,evening?.18:.8,speed);renderer.toneMappingExposure=T.MathUtils.lerp(renderer.toneMappingExposure,evening?1.05:1.25,speed);lampLights.forEach(l=>l.intensity=T.MathUtils.lerp(l.intensity,evening?2.3:1.4,speed));
+  sun.intensity=T.MathUtils.lerp(sun.intensity,evening?.05:3.35,speed);ambient.intensity=T.MathUtils.lerp(ambient.intensity,evening?.42:1.45,speed);fill.intensity=T.MathUtils.lerp(fill.intensity,evening?.18:.55,speed);renderer.toneMappingExposure=T.MathUtils.lerp(renderer.toneMappingExposure,evening?1.08:1.2,speed);lampLights.forEach(l=>l.intensity=T.MathUtils.lerp(l.intensity,evening?2.3:1.4,speed));
   const night=nightSky.update(dt,evening);corners.update(time,dt,night);details.update(dt,night);
   scene.background=(scene.background as T.Color).lerp(new T.Color(evening?'#242b43':'#e4bfa6'),speed);(scene.fog as T.Fog).color.copy(scene.background as T.Color);
   if(!reduced){dust.rotation.y=Math.sin(time*.000015)*.035;dust.position.y=Math.sin(time*.00011)*.04;curtains.forEach((c,i)=>{c.rotation.y=Math.sin(time*.0006+i)*.012})}renderer.render(scene,camera);if(!ready){ready=true;onReady()}}

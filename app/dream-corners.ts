@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { destinations, type Drink } from './room-settings';
 import { addTypewriter, type Typewriter, type TypewriterSound } from './typewriter';
+import { records } from './room-content';
 
 type P = T.Object3D;
 type Context = {
@@ -85,7 +86,7 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  box(music,1.35,.4,.03,0,.57,.31,lightWood);for(let i=0;i<13;i++)box(music,.04,.33,.045,-.6+i*.1,.57,.339,darkWood);
  const gram=group(music,-.32,.97,.02);box(gram,.62,.1,.48,0,.055,0,wood,.025);const record=cylinder(gram,.205,.205,.016,0,.123,0,ink,48);cylinder(gram,.048,.048,.003,0,.133,0,rose);rod(gram,[.22,.17,-.13],[.09,.155,.08],.012,brass);
  const hornPoints=[new T.Vector2(.025,0),new T.Vector2(.035,.12),new T.Vector2(.07,.23),new T.Vector2(.14,.34),new T.Vector2(.25,.44)];const hornGeo=new T.LatheGeometry(hornPoints,32);geometries.push(hornGeo);const hornMat=plain('#b28a45',.46,.4);hornMat.side=T.DoubleSide;const horn=new T.Mesh(hornGeo,hornMat);horn.position.set(-.15,.31,-.12);horn.rotation.z=-.65;horn.rotation.x=.56;gram.add(horn);rod(gram,[-.15,.12,-.12],[-.15,.34,-.12],.025,brass);
- for(let i=0;i<5;i++){const cd=group(music,.05+i*.082,.98,.06,-.15);box(cd,.027,.33,.32,0,.166,0,[sage,rose,ivory,blush,ceramic][i]);interactive(cd,'music',String(i));}
+ for(let i=0;i<records.length;i++){const cd=group(music,.02+i*.063,.98,.06,-.15);box(cd,.027,.33,.32,0,.166,0,[sage,rose,ivory,blush,ceramic][i%5]);interactive(cd,'music',String(i));}
  lamp(music,.62,.98,-.12,.61);
  // Travel pinboard with a geographically placed world map and tied polaroids.
  const board=group(root,-.8,2.89,5.46,Math.PI);interactive(board,'travel');box(board,3.24,1.98,.08,0,0,0,surface('#aa805d'));
@@ -94,7 +95,8 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  type Land={features:{geometry:{type:string;coordinates:number[][][]|number[][][][]}}[]};
  void fetch('/world-land.json',{signal:cancelled.signal}).then(r=>{if(!r.ok)throw new Error('Map unavailable');return r.json() as Promise<Land>}).then(land=>{if(gone)return;mapCtx.strokeStyle='#b6a283';mapCtx.lineWidth=.8;for(let lon=0;lon<1200;lon+=100){mapCtx.beginPath();mapCtx.moveTo(lon,0);mapCtx.lineTo(lon,600);mapCtx.stroke()}for(let lat=0;lat<600;lat+=100){mapCtx.beginPath();mapCtx.moveTo(0,lat);mapCtx.lineTo(1200,lat);mapCtx.stroke()}mapCtx.fillStyle='#879375';mapCtx.strokeStyle='#697258';for(const feature of land.features){const polygons=feature.geometry.type==='Polygon'?[feature.geometry.coordinates as number[][][]]:feature.geometry.coordinates as number[][][][];for(const polygon of polygons){mapCtx.beginPath();for(const ring of polygon){ring.forEach(([lon,lat],i)=>{const x=(lon+180)/360*1200,y=(90-lat)/180*600;if(i===0)mapCtx.moveTo(x,y);else mapCtx.lineTo(x,y)});mapCtx.closePath()}mapCtx.fill('evenodd');mapCtx.stroke()}}mapTex.needsUpdate=true}).catch(()=>{if(!gone){mapCtx.fillStyle='#645445';mapCtx.font='28px Georgia';mapCtx.fillText('The world, one little memory at a time',120,300);mapTex.needsUpdate=true}});
  const stringMat=plain('#7c3944');
- destinations.forEach((place,i)=>{const x=-1.28+i*.51,y=-.68;const polaroid=group(board,x,y,.092,(i%2?.04:-.05));polaroid.rotation.z=(i%2?.04:-.055);interactive(polaroid,'travel',place.id);box(polaroid,.43,.52,.012,0,0,0,paper);const mapCard=plane(polaroid,.377,.353,0,.043,.008,mapMat);mapCard.name=place.name+' map';sphere(polaroid,.012,place.lon/360*.377,.043+place.lat/180*.353,.02,rose);label(polaroid,place.name,0,-.194,.009,.36,.055);
+ const postcardLoader=new T.TextureLoader();
+ destinations.forEach((place,i)=>{const x=-1.28+i*.51,y=-.68;const polaroid=group(board,x,y,.092,(i%2?.04:-.05));polaroid.rotation.z=(i%2?.04:-.055);interactive(polaroid,'travel',place.id);box(polaroid,.43,.52,.012,0,0,0,paper);const picture=postcardLoader.load('/postcards/'+place.id+'.svg');picture.colorSpace=T.SRGBColorSpace;textures.push(picture);const pictureMaterial=new T.MeshStandardMaterial({map:picture,roughness:1});materials.push(pictureMaterial);const card=plane(polaroid,.377,.353,0,.043,.008,pictureMaterial);card.name=place.name+' postcard';label(polaroid,place.name,0,-.194,.009,.36,.055);
   const pinX=place.lon/360*2.35,pinY=.27+place.lat/180*1.175;
   sphere(board,.022,pinX,pinY,.085,brass);sphere(board,.021,x,y+.244,.14,rose);
   const curve=new T.QuadraticBezierCurve3(new T.Vector3(pinX,pinY,.08),new T.Vector3((pinX+x)/2,y+.45,.105),new T.Vector3(x,y+.244,.135));const geo=new T.TubeGeometry(curve,18,.003,4,false);geometries.push(geo);board.add(new T.Mesh(geo,stringMat));
@@ -116,15 +118,32 @@ export function addDreamCorners(c:Context,sound?:TypewriterSound){
  const teaTray=group(drinks,.19,1.148,.12);box(teaTray,.34,.025,.23,0,0,0,brass,.025);
  const biscuit=plain('#c49b65',.85),icing=plain('#d2a6a7',.7);
  for(let i=0;i<3;i++){const x=-.1+i*.1;for(const y of [.027,.051])cylinder(teaTray,.041,.041,.016,x,y,0,i===1?icing:biscuit,24);cylinder(teaTray,.039,.039,.01,x,.039,0,ivory,24);}
+ const streamMat=plain('#e1c9a0',.22);streamMat.transparent=true;streamMat.opacity=.6;
+ const stream=cylinder(drinks,.009,.012,1,0,0,0,streamMat,8);stream.visible=false;
+ const ingredients=group(drinks);ingredients.visible=false;
+ for(let i=0;i<14;i++)sphere(ingredients,.008,(random()-.5)*.065,random()*.2,(random()-.5)*.05,matchaMat,1,.5,1);
+ let ritualTime=2;
  let lit=true,playing=false,drink:Drink|null=null,drinkProgress=0;const fills:Record<Drink,number>={tea:0,matcha:0,coffee:0};candleFlames.forEach(f=>f.visible=true);
+ function animateRitual(dt:number,time:number){
+  ritualTime=Math.min(2,ritualTime+dt);const active=ritualTime<1.8&&drink;
+  const lift=active?(reduced?1:Math.sin(Math.min(1,ritualTime/1.8)*Math.PI)):0;
+  const cupX=-.66+drinkNames.indexOf(drink||'tea')*.64;
+  kettle.position.set(-.82,1.15,-.1);kettle.rotation.z=0;whisk.position.set(-.06,1.15,-.1);whisk.rotation.z=0;stream.visible=false;ingredients.visible=false;
+  if(active&&drinkProgress===1){ingredients.visible=true;ingredients.position.set(cupX,1.33-(ritualTime% .45)*.2,.21)}
+  if(active&&drinkProgress===2){
+   kettle.position.set(T.MathUtils.lerp(-.82,cupX-.23,lift),1.15+lift*.24,T.MathUtils.lerp(-.1,.21,lift));kettle.rotation.z=-lift*.65;
+   if(lift>.55){const start=new T.Vector3(.22,.25,0).applyEuler(kettle.rotation).add(kettle.position),end=new T.Vector3(cupX,1.26,.21);stream.visible=true;stream.position.copy(start).add(end).multiplyScalar(.5);stream.scale.y=start.distanceTo(end);stream.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),end.sub(start).normalize())}
+  }
+  if(active&&drinkProgress===3&&drink==='matcha'){whisk.position.set(cupX+Math.sin(time*.018)*.015,1.07+lift*.09,.21+Math.cos(time*.018)*.015);whisk.rotation.z=.15*Math.sin(time*.024)}
+ }
  return {
   typewriter,
   updateNote:typewriter.setText,
   fillBowl(){kibble.visible=true;},
   setCandles(value:boolean){lit=value;candleFlames.forEach(f=>f.visible=value)},
   setPlaying(value:boolean){playing=value;},
-  setDrink(id:Drink,progress:number){drink=id;drinkProgress=Math.min(3,Math.max(0,progress));fills[id]=drinkProgress;liquids[id].visible=progress>0;steam.visible=progress===3;},
-  update(time:number,dt:number,night:number){typewriter.update(dt);nookGlow.intensity=1.6+night*2;bulbMat.emissiveIntensity=1.1+night*.8;candleGlows.forEach((light,i)=>{light.intensity=lit?(.45+(reduced?0:Math.sin(time*.006+i)*.05)):0});candleFlames.forEach((f,i)=>{f.scale.y=.024*1.9*(1+(reduced?0:Math.sin(time*.008+i)*.09))});if(playing&&!reduced)record.rotation.y+=dt*.65;for(const id of ['tea','matcha','coffee'] as Drink[]){const target=.024+fills[id]/3*.085;liquids[id].position.y=T.MathUtils.lerp(liquids[id].position.y,target,1-Math.exp(-dt*4))}if(drink&&drinkProgress===3){const index=drinkNames.indexOf(drink);for(let i=0;i<18;i++){const phase=(i/18+(reduced?0:time*.00013))%1;steamPos[i*3]=-.66+index*.64+Math.sin(phase*8+i)*.025;steamPos[i*3+1]=1.29+phase*.32;steamPos[i*3+2]=.21+Math.cos(phase*5+i)*.022}steamGeo.attributes.position.needsUpdate=true}},
+  setDrink(id:Drink,progress:number){const changed=fills[id]!==progress;drink=id;drinkProgress=Math.min(3,Math.max(0,progress));if(changed)ritualTime=0;fills[id]=drinkProgress;liquids[id].visible=progress>0;steam.visible=progress===3;},
+  update(time:number,dt:number,night:number){typewriter.update(dt);animateRitual(dt,time);nookGlow.intensity=1.6+night*2;bulbMat.emissiveIntensity=1.1+night*.8;candleGlows.forEach((light,i)=>{light.intensity=lit?(.45+(reduced?0:Math.sin(time*.006+i)*.05)):0});candleFlames.forEach((f,i)=>{f.scale.y=.024*1.9*(1+(reduced?0:Math.sin(time*.008+i)*.09))});if(playing&&!reduced)record.rotation.y+=dt*.65;for(const id of ['tea','matcha','coffee'] as Drink[]){const target=.024+fills[id]/3*.085;liquids[id].position.y=T.MathUtils.lerp(liquids[id].position.y,target,1-Math.exp(-dt*4))}if(drink&&drinkProgress===3){const index=drinkNames.indexOf(drink);for(let i=0;i<18;i++){const phase=(i/18+(reduced?0:time*.00013))%1;steamPos[i*3]=-.66+index*.64+Math.sin(phase*8+i)*.025;steamPos[i*3+1]=1.29+phase*.32;steamPos[i*3+2]=.21+Math.cos(phase*5+i)*.022}steamGeo.attributes.position.needsUpdate=true}},
   dispose(){gone=true;cancelled.abort()},
  };
 }

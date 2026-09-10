@@ -91,3 +91,46 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{
  .is-typing .nav button{padding:8px;min-height:36px;font-size:11px}
  .is-typing .nav button svg{display:none}
 }
+
+/* A quiet dock leaves the room, and the rituals within it, in the foreground. */
+.bottom-ui{bottom:18px;gap:10px}
+.bottom-ui .caption{margin:0;font-size:16px}
+.nav.compact-dock{display:flex;width:auto;max-width:100%;border-radius:16px;padding:5px;gap:2px;background:#fff3e5ed}
+.nav.compact-dock button{min-height:44px;padding:10px 18px;font-size:14px;border-radius:10px;gap:8px}
+.nav.compact-dock button svg{display:block}
+.is-typing{--writing-header:112px;--writing-footer:158px}
+.is-typing .letter-count{flex-basis:auto!important;margin:0 5px 0 0!important}
+.writing-title{position:absolute;top:86px;left:20px;right:20px;text-align:center;font:18px Georgia,serif;color:#644740;pointer-events:none}
+.is-evening .writing-title{color:#f4e5ce}
+.room-dialog.explore-dialog[data-slot=dialog-content],.room-dialog.record-dialog[data-slot=dialog-content]{width:min(650px,calc(100vw - 32px));max-width:650px}
+.places-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.places-grid button{text-align:left;padding:15px 14px;background:#f0e3d2;border:1px solid #d9c5af;border-radius:8px;color:#5a4036}
+.places-grid button:hover,.places-grid button[aria-pressed=true]{background:#e2c7bc;border-color:#b4807e}
+.places-grid span{display:block;font:18px Georgia,serif}.places-grid small{display:block;margin-top:7px;font-size:12px;line-height:1.5;color:#796054}
+.ritual-panel,.activity-button{pointer-events:auto}
+.ritual-panel{padding:10px 14px;background:#fff3e5f5;border:1px solid #ddc4ad;border-radius:12px;box-shadow:0 7px 35px #3d271720;max-width:100%}
+.drink-choices,.record-filters,.postcard-tabs{display:flex;gap:5px;flex-wrap:wrap}
+.drink-choices{justify-content:center;margin-bottom:9px}
+.drink-choices button,.record-filters button,.postcard-tabs button{border:1px solid transparent;background:transparent;color:#6c4d43;padding:8px 12px;border-radius:6px;font-size:14px;text-transform:capitalize;min-height:38px}
+.drink-choices button[aria-pressed=true],.record-filters button[aria-pressed=true],.postcard-tabs button[aria-pressed=true]{background:#794951;color:#fff3e5}
+.ritual-step{display:flex;align-items:center;gap:12px}.ritual-step>span{font-size:13px;color:#816354}
+.sky-controls,.action-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.entrance-actions{bottom:126px}.welcome-card{bottom:125px;display:block;white-space:normal;text-align:center;background:#fff3e5f5;border:1px solid #ddc4ad;padding:24px 28px;border-radius:12px;width:min(390px,calc(100vw - 32px));box-shadow:0 16px 65px #3d27172b}
+.small-label{font-size:11px;color:#99766a}.welcome-card h2{font:italic 28px Georgia,serif;margin:12px 0}.welcome-card p{font-size:14px;line-height:1.8;margin:0 0 20px;color:#806354}
+.object-hint{position:absolute;pointer-events:none;z-index:4;padding:10px 14px;background:#fff5e9ed;color:#60473d;border:1px solid #ddc4ad;border-radius:6px;font:16px Georgia,serif;box-shadow:0 5px 20px #3922181a}
+.object-hint span{display:block;font:11px Arial,sans-serif;margin-top:5px;color:#99766a}
+.record-shelf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 12px;max-height:48dvh;overflow:auto;padding:6px 2px}
+.record-sleeve{text-align:left;background:transparent;border:0;color:#5a4036;padding:0}.record-sleeve strong{display:block;font:17px Georgia,serif;margin:9px 0 4px}.record-sleeve>span:last-child{font-size:12px;line-height:1.4;display:block}
+.sleeve-art{display:grid;place-items:center;position:relative;aspect-ratio:1;background:var(--sleeve);border:6px solid #e6d6be;box-shadow:2px 4px 8px #50392d30;transition:transform .25s;border-radius:2px;color:#f3e2c6;background-image:repeating-radial-gradient(circle at 50% 40%,transparent 0 8px,#fff1 9px 10px)}
+.sleeve-art svg{width:52%;height:52%;stroke-width:1}.sleeve-art small{position:absolute;bottom:8px;font:italic 12px Georgia,serif}
+.record-sleeve:hover .sleeve-art{transform:translateY(-5px) rotate(-2deg)}.record-sleeve[aria-pressed=true] .sleeve-art{border-color:#b57e83}
+.music-player{position:absolute;z-index:8;right:20px;top:100px;width:310px;background:#f6e8d7;border:1px solid #d5bfab;border-radius:10px;box-shadow:0 8px 35px #2d1e1a35;overflow:hidden}
+.player-heading{display:flex;align-items:center;padding:5px 8px}.player-heading>button:first-child{display:flex;align-items:center;gap:10px;flex:1;text-align:left;border:0;background:none;color:#68483f;font-size:14px;padding:6px}.player-heading small{display:block;color:#947669;font-size:11px;margin-top:3px}.player-heading>button:first-child>svg{margin-left:auto}
+.tiny-record{width:27px;height:27px;border-radius:50%;background:radial-gradient(circle,#ead0af 0 2px,#a77776 3px 7px,#453c36 8px);flex:none}
+.player-body{padding:0 9px 9px}.player-body iframe{border:0;border-radius:7px;width:100%}.player-body>a{display:flex;gap:6px;align-items:center;font-size:11px;color:#7f5c50;margin:6px 3px 0}.player-status{font-size:13px;line-height:1.5;padding:12px}
+.travel-print{margin:0;padding:12px 12px 20px;background:#f4ead6;transform:rotate(-1deg);box-shadow:0 4px 18px #65452b22}.travel-print img{display:block;width:100%;max-height:35dvh;object-fit:cover}.travel-print figcaption{text-align:center;font:italic 18px Georgia,serif;margin-top:15px;color:#916c60}
+.postcard-tabs{justify-content:center}.record-turning{animation:turn 7s linear infinite}
+@media(max-width:780px){.is-typing{--writing-header:112px;--writing-footer:160px}.writing-title{font-size:16px;top:87px}.writing-actions{padding:7px!important}.nav.compact-dock button{padding:10px 13px;font-size:13px}.bottom-ui .caption{font-size:14px}.music-player{top:92px;right:14px;width:min(310px,calc(100vw - 28px))}}
+@media(max-width:440px){.room-header{padding:16px}.brand{font-size:25px}.eyebrow{font-size:10px}.nav.compact-dock button{padding:10px 11px;gap:6px}.writing-actions .letter-count{display:none}.places-grid{gap:6px}.places-grid button{padding:12px}.places-grid span{font-size:16px}.record-shelf{grid-template-columns:1fr 1fr}.ritual-step{gap:7px}.sky-controls{padding:8px}.sky-controls button{font-size:12px;padding:9px}.welcome-card{padding:20px}.object-hint{display:none}}
+@media(max-height:560px){.is-typing{--writing-header:80px;--writing-footer:126px}.writing-title{top:58px;font-size:15px}.bottom-ui .caption{display:none}.welcome-card{bottom:85px;padding:16px}.welcome-card p,.welcome-card .small-label{display:none}.music-player{top:66px}.room-dialog[data-slot=dialog-content]{max-height:calc(100dvh - 20px)}}
+@media(prefers-reduced-motion:reduce){.record-turning{animation:none}.record-sleeve:hover .sleeve-art{transform:none}}
